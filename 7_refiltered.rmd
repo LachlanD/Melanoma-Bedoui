@@ -1,0 +1,1060 @@
+---
+title: "07_registered.rmd"
+author: "Lachlan Dryburgh"
+date: "2024-03-07"
+output: html_document
+---
+
+```{r}
+library(Seurat)
+library(ggplot2)
+library(viridis)
+
+seu2 <- readRDS('../output/reclustered.rds')
+
+
+DimPlot(seu2)
+```
+
+
+
+```{r}
+seu2 <- subset(seu2, subset = clusters_res0.5 %in% c(0,1,2,3,4,5))
+
+seu2 <- subset(seu2, subset = nCount_RNA < 11000)
+seu2 <- subset(seu2, subset = nFeature_RNA > 500)
+
+DimPlot(seu2)
+```
+
+```{r}
+library(slingshot)
+sce = as.SingleCellExperiment(seu2)
+
+sce2 <- slingshot(sce, clusterLabels = 'clusters_res0.5',  reducedDim = 'UMAP', start.clus = NULL)
+
+summary(sce2$slingPseudotime_1)
+
+sce2$pseudotime <- rowMeans(cbind(sce2$slingPseudotime_1, sce2$slingPseudotime_2, sce2$slingPseudotime_3, sce2$slingPseudotime_4), na.rm = T)
+```
+
+```{r}
+library(grDevices)
+library(RColorBrewer)
+
+colors <- colorRampPalette(brewer.pal(11,'Spectral')[-6])(100)
+
+plotcol <- colors[cut(sce2$slingPseudotime_1, breaks=100)]
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+
+#plotcol <- colors[cut(sce2$slingPseudotime_2, breaks=100)]
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+```
+
+```{r}
+sce = as.SingleCellExperiment(seu2)
+
+sce2 <- slingshot(sce, clusterLabels = 'clusters_res0.5',  reducedDim = 'UMAP', start.clus = 3)
+
+summary(sce2$slingPseudotime_1)
+
+sce2$pseudotime <- rowMeans(cbind(sce2$slingPseudotime_1, sce2$slingPseudotime_2, sce2$slingPseudotime_3, sce2$slingPseudotime_4), na.rm = T)
+```
+
+
+```{r}
+colors <- colorRampPalette(brewer.pal(11,'Spectral')[-6])(100)
+
+plotcol <- colors[cut(sce2$slingPseudotime_1, breaks=100)]
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce2$slingPseudotime_2, breaks=100)]
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+```
+```{r}
+seu3 <- NormalizeData(seu2)
+seu3 <- FindVariableFeatures(seu3)
+seu3 <- ScaleData(seu3)
+
+seu3 <- RunPCA(seu3)
+seu3 <- RunUMAP(seu3, dims = 1:15)
+```
+
+```{r}
+DimPlot(seu2)
+DimPlot(seu3)
+```
+
+```{r}
+seu3 <- FindNeighbors(seu3)
+seu3 <- FindClusters(seu3, resolution =  0.5)
+
+c <- seu3@meta.data$seurat_clusters
+
+seu3@meta.data$clusters <- seu3@meta.data$seurat_clusters
+
+t <- list('0' = 'memory 1', '1' = 'memory 2', '2' = 'naive-like', '3' = 'stem-like', '4' = 'interferon activated', '5' = 'other' )
+seu3@meta.data$clusters <- unlist(t[c])
+
+DimPlot(seu3, group.by = 'clusters' ,label =T)
+DimPlot(seu3, split.by = 'group')
+```
+```{r}
+DimPlot(seu3, group.by = 'annot_merged')
+```
+```{r}
+sce = as.SingleCellExperiment(seu3)
+
+sce3 <- slingshot(sce, clusterLabels = 'seurat_clusters',  reducedDim = 'UMAP', start.clus = NULL)
+
+summary(sce3$slingPseudotime_1)
+
+sce3$pseudotime <- rowMeans(cbind(sce3$slingPseudotime_1, sce3$slingPseudotime_2, sce3$slingPseudotime_3, sce3$slingPseudotime_4), na.rm = T)
+```
+```{r}
+colors <- colorRampPalette(brewer.pal(11,'Spectral')[-6])(100)
+
+plotcol <- colors[cut(sce3$slingPseudotime_1, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce3)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce3), lwd=2, col='black')
+
+
+#plotcol <- colors[cut(sce3$slingPseudotime_2, breaks=100)]
+#plotcol <- colors[cut(sce3$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce3)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce3), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce3$pseudotime, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce3)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce3), lwd=2, col='black')
+```
+
+```{r}
+sce = as.SingleCellExperiment(seu3)
+
+sce4 <- slingshot(sce, clusterLabels = 'seurat_clusters',  reducedDim = 'UMAP', start.clus = 2)
+
+summary(sce4$slingPseudotime_1)
+
+sce4$pseudotime <- rowMeans(cbind(sce4$slingPseudotime_1, sce4$slingPseudotime_2, sce4$slingPseudotime_3, sce4$slingPseudotime_4), na.rm = T)
+```
+
+```{r}
+colors <- colorRampPalette(brewer.pal(11,'Spectral')[-6])(100)
+
+plotcol <- colors[cut(sce4$slingPseudotime_1, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce4)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce4), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce4$slingPseudotime_2, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce4)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce4), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce4$pseudotime, breaks=100)]
+#plotcol <- colors[cut(sce4$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce4)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce4), lwd=2, col='black')
+```
+```{r}
+seu3@meta.data$pseudotime <- sce4$pseudotime
+seu3@meta.data$slingPseudotime_1 <- sce4$slingPseudotime_1
+seu3@meta.data$slingPseudotime_2 <- sce4$slingPseudotime_2
+```
+
+```{r}
+library(monocle3)
+library(SeuratWrappers)
+
+cds <- as.cell_data_set(seu3)
+
+plot_cells(cds, color_cells_by = "cluster", show_trajectory_graph = FALSE)
+
+cds <- cluster_cells(cds, resolution=1e-3)
+
+cds <- learn_graph(cds, use_partition = TRUE, verbose = FALSE)
+
+plot_cells(cds,
+           color_cells_by = "cluster",
+           label_groups_by_cluster=FALSE,
+           label_leaves=FALSE,
+           label_branch_points=FALSE)
+
+cds <- order_cells(cds)
+
+seu3 <- AddMetaData(seu3, pseudotime(cds), "Monocle_psuedotime")
+FeaturePlot(seu3, features = "Monocle_psuedotime")
+
+lineage1 <- choose_graph_segments(cds)
+lineage2 <- choose_graph_segments(cds)
+
+#contour(x = list(seu3@reductions$umap@cell.embeddings[,1], seu3@reductions$umap@cell.embeddings[,2], seu3@meta.data$Monocle_psuedotime))
+
+
+
+
+plot_cells(cds,
+           color_cells_by = "pseudotime",
+           group_cells_by = "cluster",
+           label_cell_groups = FALSE,
+           label_groups_by_cluster=FALSE,
+           label_leaves=FALSE,
+           label_branch_points=FALSE,
+           label_roots = FALSE,
+           trajectory_graph_color = "black")
+
+
+
+c_cds <- cds[,cds@colData$diet == 'Ctrl']
+h_cds <- cds[,cds@colData$diet == 'HF']
+
+df <- data.frame(pseudotime = pseudotime(c_cds), cluster = c_cds@colData$seurat_clusters)
+df2 <- data.frame(pseudotime = pseudotime(h_cds), cluster = h_cds@colData$seurat_clusters)
+
+df <- df[order(df$pseudotime),]
+df2 <- df2[order(df2$pseudotime),]
+
+df$rank <- 1:nrow(df)
+df2$rank <- 1:nrow(df2)
+
+df$norm_rank <- as.integer(df$rank)/nrow(df)
+df2$norm_rank <- as.integer(df2$rank)/nrow(df2)
+
+ggplot() +
+  geom_point(data=df, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + geom_point(data=df2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + labs(title = "All")
+
+cl <- 0 
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 1 
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 2
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 3
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 4
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 5
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+```
+
+```{r}
+c_cds <- lineage1[,lineage1@colData$diet == 'Ctrl']
+h_cds <- lineage1[,lineage1@colData$diet == 'HF']
+
+df <- data.frame(pseudotime = c_cds@colData$Monocle_psuedotime, cluster = c_cds@colData$seurat_clusters)
+df2 <- data.frame(pseudotime = h_cds@colData$Monocle_psuedotime, cluster = h_cds@colData$seurat_clusters)
+
+df <- df[order(df$pseudotime),]
+df2 <- df2[order(df2$pseudotime),]
+
+df$rank <- 1:nrow(df)
+df2$rank <- 1:nrow(df2)
+
+df$norm_rank <- as.integer(df$rank)/nrow(df)
+df2$norm_rank <- as.integer(df2$rank)/nrow(df2)
+
+ggplot() +
+  geom_point(data=df, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + geom_point(data=df2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + labs(title = "All")
+
+cl <- 0 
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 1 
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 2
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 3
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 4
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 5
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+```
+
+```{r}
+c_cds <- lineage2[,lineage2@colData$diet == 'Ctrl']
+h_cds <- lineage2[,lineage2@colData$diet == 'HF']
+
+df <- data.frame(pseudotime = c_cds@colData$Monocle_psuedotime, cluster = c_cds@colData$seurat_clusters)
+df2 <- data.frame(pseudotime = h_cds@colData$Monocle_psuedotime, cluster = h_cds@colData$seurat_clusters)
+
+df <- df[order(df$pseudotime),]
+df2 <- df2[order(df2$pseudotime),]
+
+df$rank <- 1:nrow(df)
+df2$rank <- 1:nrow(df2)
+
+df$norm_rank <- as.integer(df$rank)/nrow(df)
+df2$norm_rank <- as.integer(df2$rank)/nrow(df2)
+
+ggplot() +
+  geom_point(data=df, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + geom_point(data=df2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + labs(title = "All")
+
+cl <- 0 
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 1 
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 2
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 3
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 4
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 5
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+```
+
+```{r}
+c_cds <- subset(seu3, subset = diet == "Ctrl")
+h_cds <- subset(seu3, subset = diet == "HF")
+
+df <- data.frame(pseudotime = c_cds@meta.data$slingPseudotime_1, cluster = c_cds@meta.data$seurat_clusters)
+df2 <- data.frame(pseudotime = h_cds@meta.data$slingPseudotime_1, cluster = h_cds@meta.data$seurat_clusters)
+
+df <- df[!is.na(df$pseudotime),]
+df2 <- df2[!is.na(df2$pseudotime),]
+
+
+df <- df[order(df$pseudotime),]
+df2 <- df2[order(df2$pseudotime),]
+
+df$rank <- 1:nrow(df)
+df2$rank <- 1:nrow(df2)
+
+df$norm_rank <- as.integer(df$rank)/nrow(df)
+df2$norm_rank <- as.integer(df2$rank)/nrow(df2)
+
+ggplot() +
+  geom_point(data=df, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + geom_point(data=df2, aes(x = norm_rank, y=  pseudotime, color= "HF")) + labs(title = "All")
+
+cl <- 0 
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 1 
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 2
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 3
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 4
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 5
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+```
+
+```{r}
+c_cds <- subset(seu3, subset = diet == "Ctrl")
+h_cds <- subset(seu3, subset = diet == "HF")
+
+df <- data.frame(pseudotime = c_cds@meta.data$slingPseudotime_2, cluster = c_cds@meta.data$seurat_clusters)
+df2 <- data.frame(pseudotime = h_cds@meta.data$slingPseudotime_2, cluster = h_cds@meta.data$seurat_clusters)
+
+df <- df[!is.na(df$pseudotime),]
+df2 <- df2[!is.na(df2$pseudotime),]
+
+
+df <- df[order(df$pseudotime),]
+df2 <- df2[order(df2$pseudotime),]
+
+df$rank <- 1:nrow(df)
+df2$rank <- 1:nrow(df2)
+
+df$norm_rank <- as.integer(df$rank)/nrow(df)
+df2$norm_rank <- as.integer(df2$rank)/nrow(df2)
+
+ggplot() +
+  geom_point(data=df, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + geom_point(data=df2, aes(x = norm_rank, y=  pseudotime, color= "HF")) + labs(title = "All")
+
+cl <- 0 
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 1 
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 2
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 3
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 4
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+
+cl <- 5
+p1 <- df[df$cluster == cl,]
+rownames(p1) <- 1:nrow(p1)
+p1$norm_rank <- as.integer(rownames(p1))/nrow(p1)
+p2 <- df2[df2$cluster == cl,]
+rownames(p2) <- 1:nrow(p2)
+p2$norm_rank <- as.integer(rownames(p2))/nrow(p2)
+
+ggplot() +
+  geom_point(data=p1, aes(x = norm_rank,y = pseudotime, color= "Ctrl")) + 
+  geom_point(data=p2, aes(x = norm_rank, y=  pseudotime, color= "HF"))  + 
+  labs(title = paste("Cluster", cl))
+```
+```{r}
+cell_count <- ncol(seu3)
+
+set.seed(632024)
+subs <- sample(1:3, cell_count, replace = T)
+
+
+seu3$sample <- as.factor(paste(seu3$group, subs,  sep = '_'))
+
+df <- seu3@meta.data
+
+ggplot(df, aes(x = sample, fill = seurat_clusters)) +
+  geom_bar(position = "fill", group = 'group') +
+  scale_fill_viridis_d(option = 'turbo')
+DimPlot(seu3, group.by = 'seurat_clusters', split.by = 'group') + scale_color_viridis(discrete=TRUE, option="turbo")
+
+ggplot(df, aes(x = diet, fill = seurat_clusters)) +
+  geom_bar(position = "fill", group = 'diet') 
+```
+
+```{r}
+library(speckle)
+
+
+seu3 <- SetIdent(seu3, value = 'seurat_clusters')
+prop <- propeller(x = seu3)
+
+
+props <- getTransformedProps(seu3$seurat_clusters, seu3$sample, transform="logit")
+
+
+barplot(props$Proportions, legend=TRUE, 
+        ylab="Proportions")
+
+plotCellTypeMeanVar(props$Counts)
+
+prop
+
+write.csv(prop, '../output/prop.csv')
+```
+```{r}
+FeaturePlot(seu3, features = 'Pdcd1', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Il7r', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Tcf7', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Tox', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Ly6c1', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Il2ra', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Cd69', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Itgae', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Cd24a', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Ptprc', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Cd44', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Sell', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Klrg1', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Havcr2', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Cd101', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Cx3cr1', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Prf1', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Ifng', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Xist', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Dntt', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Kit', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu3, features = 'Sell', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+```
+```{r}
+m <- FindAllMarkers(seu3)
+
+library(openxlsx)
+
+wb = createWorkbook()
+addWorksheet(wb, 'all')
+m <- FindMarkers(seu3, ident.1 = 'Tumour_HF', group.by = 'group')
+m$gene <- rownames(m)
+writeData(wb, 'all', x = m)
+for(i in levels(seu3$seurat_clusters)) {
+   m <- FindMarkers(seu3, subset.ident = i, group.by = 'group', ident.1 = 'Tumour_HF')
+   m$gene <- rownames(m)
+  s <- paste('cluster', i)
+  addWorksheet(wb, s)
+  writeData(wb, s, x = m)
+}
+
+
+saveWorkbook(wb, '../output/Filtered_clusters_HFvsCtrl_degs.xlsx', overwrite = T)
+```
+```{r}
+df <- seu3@meta.data
+
+DimPlot(seu3, group.by = 'seurat_clusters')
+
+ggplot(df, aes(x = group, fill = seurat_clusters)) +
+  geom_bar(position = "fill") +
+  scale_fill_viridis_d(option = 'turbo')
+```
+
+```{r}
+FeaturePlot(seu3, features = 'Tcf7')
+FeaturePlot(seu3, features = 'Slamf6')
+FeaturePlot(seu3, features = 'Id3')
+FeaturePlot(seu3, features = 'Myb')
+FeaturePlot(seu3, features = 'Ikzf2')
+FeaturePlot(seu3, features = 'Tox')
+
+
+
+
+
+huang_cl1 <- c("Cd27", "Banf1", "Tcf7", "Clec2d", "Stat4", "Ikzf1", "Il7r", "S1pr1", "Ddx21", "Bach2", "C1qbp", "Foxp1", "Sell", "Il2rb")
+huang_cl2 <- c("Ltb", "Stat1", "Cd69", "Banf1", "Tcf7", "Ccr7", "Ikzf1", "Il7r", "S1pr1", "Ddx21", "Lef1", "Bach2", "C1qbp", "Foxp1", "Sell")
+huang_cl3 <- c("Ltb", "Stat1", "Slamf6", "Banf1", "Tcf7", "Ccr7", "Clec2d", "Stat4", "Cxcr3", "Il2rb", "Icos", "Tox", "Cd28", "Pdcd1", "Lag3")
+
+seu3 <- AddModuleScore(seu3, list(huang_cl1, huang_cl2, huang_cl3), name = "Huang")
+
+FeaturePlot(seu3, features = "Huang1")
+VlnPlot(seu3, "Huang1", split.by = "diet")
+
+FeaturePlot(seu3, features = "Huang2")
+VlnPlot(seu3, "Huang2", split.by = "diet")
+
+FeaturePlot(seu3, features = "Huang3")
+VlnPlot(seu3, "Huang3", split.by = "diet")
+
+FeaturePlot(seu3, features = "Ccl5")
+VlnPlot(seu3, "Ccl5", split.by = "diet")
+```
+
+```{r}
+irf <- subset(seu3, subset = seurat_clusters == 4)
+
+irf <- NormalizeData(irf)
+irf <- FindVariableFeatures(irf)
+irf <- ScaleData(irf)
+
+irf <- RunPCA(irf)
+irf <- RunUMAP(irf, dims = 1:15)
+
+DimPlot(irf, group.by = 'diet', reduction = 'pca')
+DimPlot(irf, group.by = 'diet', reduction = 'umap')
+
+hl <- colnames(irf[,irf@reductions$pca@cell.embeddings[,1] < -10])
+
+DimPlot(seu3, cells.highlight = hl, split.by = 'diet')
+
+View(irf@reductions$pca@feature.loadings[order(abs(irf@reductions$pca@feature.loadings[,1]), decreasing = T),1])
+
+
+FeaturePlot(irf, features = 'Isg15', reduction = 'pca', split.by = 'diet')
+FeaturePlot(seu3, features = 'Isg15', split.by = 'diet')
+
+FeaturePlot(irf, features = 'Ifit3', reduction = 'pca', split.by = 'diet')
+FeaturePlot(seu3, features = 'Ifit3', split.by = 'diet')
+
+FeaturePlot(irf, features = 'Ifit1', reduction = 'pca', split.by = 'diet')
+FeaturePlot(seu3, features = 'Ifit1', split.by = 'diet')
+
+FeaturePlot(irf, features = 'Usp18', reduction = 'pca', split.by = 'diet')
+FeaturePlot(seu3, features = 'Usp18', split.by = 'diet')
+
+FeaturePlot(irf, features = 'Rsad2', reduction = 'pca', split.by = 'diet')
+FeaturePlot(seu3, features = 'Rsad2', split.by = 'diet')
+
+
+ubq <- strsplit('Ankib1/Cbl/Chfr/Cul1/Dtx3l/Nhlrc3/Ppil2/Rfwd3/Rnf145/Traf6/Trim33/Ube2i/Ube2l3/Ube4a/Cul3/Fbxw11/Klhl20/Ltn1/Mib2/Nosip/Peli1/Ppp1r11/Rnf10/Rnf114/Rnf220/Stub1/Tnfaip1/Trim39/Ube2e3/Rnft1', split = '/')
+
+seu3 <- AddModuleScore(seu3, ubq, name = 'Ubq')
+
+FeaturePlot(seu3, features = 'Gzmb', split.by = 'diet')
+
+FeaturePlot(irf, features = 'pseudotime', reduction = 'pca', split.by = 'diet')
+```
+
+
+```{r}
+saveRDS(seu3, '../output/refiltered.rds')
+```
+
+
+```{r}
+markers <- FindAllMarkers(seu3, group.by = 'seurat_clusters')
+```
+
+
+```{r}
+library(openxlsx)
+
+wb = createWorkbook()
+for(i in levels(seu3$seurat_clusters)) {
+  
+  addWorksheet(wb, i)
+  writeData(wb, i, x = markers[markers$cluster == i,])
+}
+
+
+saveWorkbook(wb, '../output/refiltered_markers.xlsx', overwrite = T)
+```
+
+```{r}
+library(ShinyCell)
+
+scConf = createConfig(seu3)
+makeShinyApp(seu3, scConf, gene.mapping = TRUE,
+             shiny.title = "Melenoma LN CD8+",
+             shiny.dir = '../CD8shinyApp') 
+
+```
+
+
+```{r}
+library(monocle3)
+library(SeuratWrappers)
+
+seu_hf <- subset(seu3, subset = diet == 'HF') 
+
+cds_hf <- as.cell_data_set(seu_hf)
+
+plot_cells(cds_hf, color_cells_by = "cluster", show_trajectory_graph = FALSE)
+
+cds_hf <- cluster_cells(cds_hf, resolution=1e-3)
+
+cds_hf <- learn_graph(cds_hf, use_partition = TRUE, verbose = FALSE)
+
+plot_cells(cds_hf,
+           color_cells_by = "cluster",
+           label_groups_by_cluster=FALSE,
+           label_leaves=FALSE,
+           label_branch_points=FALSE)
+
+cds_hf <- order_cells(cds_hf)
+
+seu_hf <- AddMetaData(seu_hf, pseudotime(cds_hf), "Monocle_psuedotime")
+FeaturePlot(seu_hf, features = "Monocle_psuedotime")
+
+lineage1 <- choose_graph_segments(cds_hf)
+lineage2 <- choose_graph_segments(cds_hf)
+
+#contour(x = list(seu3@reductions$umap@cell.embeddings[,1], seu3@reductions$umap@cell.embeddings[,2], seu3@meta.data$Monocle_psuedotime))
+
+
+plot_cells(cds_hf,
+           color_cells_by = "pseudotime",
+           group_cells_by = "cluster",
+           label_cell_groups = FALSE,
+           label_groups_by_cluster=FALSE,
+           label_leaves=FALSE,
+           label_branch_points=FALSE,
+           label_roots = FALSE,
+           trajectory_graph_color = "black")
+
+
+
+df_hf <- data.frame(pseudotime = pseudotime(cds_hf), cluster = cds_hf@colData$seurat_clusters)
+```
+```{r}
+seu_ctrl <- subset(seu3, subset = diet == 'Ctrl') 
+
+cds_ctrl <- as.cell_data_set(seu_ctrl)
+
+plot_cells(cds_ctrl, color_cells_by = "cluster", show_trajectory_graph = FALSE)
+
+cds_ctrl <- cluster_cells(cds_ctrl, resolution=1e-3)
+
+cds_ctrl <- learn_graph(cds_ctrl, use_partition = TRUE, verbose = FALSE)
+
+plot_cells(cds_ctrl,
+           color_cells_by = "cluster",
+           label_groups_by_cluster=FALSE,
+           label_leaves=FALSE,
+           label_branch_points=FALSE)
+
+cds_ctrl <- order_cells(cds_ctrl)
+
+seu_ctrl <- AddMetaData(seu_ctrl, pseudotime(cds), "Monocle_psuedotime")
+FeaturePlot(seu_ctrl, features = "Monocle_psuedotime")
+
+lineage1 <- choose_graph_segments(cds_ctrl)
+#lineage2 <- choose_graph_segments(cds_ctrl)
+
+#contour(x = list(seu3@reductions$umap@cell.embeddings[,1], seu3@reductions$umap@cell.embeddings[,2], seu3@meta.data$Monocle_psuedotime))
+
+
+plot_cells(cds_ctrl,
+           color_cells_by = "pseudotime",
+           group_cells_by = "cluster",
+           label_cell_groups = FALSE,
+           label_groups_by_cluster=FALSE,
+           label_leaves=FALSE,
+           label_branch_points=FALSE,
+           label_roots = FALSE,
+           trajectory_graph_color = "black")
+
+
+
+df_ctrl <- data.frame(pseudotime = pseudotime(cds_ctrl), cluster = cds_ctrl@colData$seurat_clusters)
+```
+```{r}
+df_hf <- df_hf[order(df_hf$pseudotime),]
+df_ctrl <- df_ctrl[order(df_ctrl$pseudotime),]
+
+df_hf$rank <- 1:nrow(df_hf)
+df_ctrl$rank <- 1:nrow(df_ctrl)
+
+df_hf$norm_rank <- as.integer(df_hf$rank)/nrow(df_hf)
+df_ctrl$norm_rank <- as.integer(df_ctrl$rank)/nrow(df_ctrl)
+
+ggplot() +
+  geom_point(data=df_hf, aes(x = norm_rank,y = pseudotime, color= "HF")) + geom_point(data=df_ctrl, aes(x = norm_rank, y=  pseudotime, color= "Ctrl"))  + labs(title = "All")
+
+
+```
+```{r}
+df_hf$norm_psuedotime <- df_hf$pseudotime/max(df_hf$pseudotime)
+df_ctrl$norm_psuedotime <- df_ctrl$pseudotime/max(df_ctrl$pseudotime)
+
+ggplot() +
+  geom_point(data=df_hf, aes(x = norm_rank,y = norm_psuedotime, color= "HF")) + geom_point(data=df_ctrl, aes(x = norm_rank, y=  norm_psuedotime, color= "Ctrl"))  + labs(title = "All")
+```
+

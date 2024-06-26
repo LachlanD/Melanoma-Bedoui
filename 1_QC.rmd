@@ -1,0 +1,110 @@
+---
+title: "Quality Control"
+author: "Lachlan Dryburgh"
+date: "2024-02-12"
+output: html_document
+---
+
+```{r}
+library(Seurat)
+library(tidyverse)
+library(ggplot2)
+
+```
+
+
+```{r}
+path <- '~/scratch/lachlan/melenoma_bedoui/data/cellranger_without_introns_out/outs/per_sample_outs/cellranger_without_introns_out/count/sample_filtered_feature_bc_matrix'
+counts <- Read10X(path)
+seu <- CreateSeuratObject(counts$`Gene Expression`, min.cells = 3)
+
+seu[['HTO']] <- CreateAssayObject(counts$`Antibody Capture`)
+seu[['HTO_2']] <- CreateAssayObject(counts$`Antibody Capture`[1:4,])
+```
+
+```{r}
+seu <- NormalizeData(seu, assay = 'HTO' , normalization.method = 'CLR')
+seu <- NormalizeData(seu, assay = 'HTO_2' , normalization.method = 'CLR')
+```
+```{r}
+#seu <- HTODemux(seu, assay = "HTO", positive.quantile = 0.99)
+
+#table(seu$HTO_classification.global)
+
+ncol(seu)
+
+seu <- HTODemux(seu, assay = "HTO_2", positive.quantile = 0.99)
+
+table(seu$HTO_2_classification.global)
+
+#HTOHeatmap(seu, assay = "HTO")
+HTOHeatmap(seu, assay = "HTO_2")
+```
+
+
+```{r}
+seu@assays$HTO$counts[,seu@assays$HTO$counts[5,] > 50]
+seu@assays$HTO$counts[,seu@assays$HTO$counts[6,] > 50]
+```
+
+```{r}
+hist(seu[,seu@assays$HTO$counts[5,] > 10 & seu@assays$HTO$counts[5,] < 500]@assays$HTO$counts[5,], breaks= 200)
+hist(seu[,seu@assays$HTO$counts[6,] > 10 & seu@assays$HTO$counts[6,] < 500]@assays$HTO$counts[6,], breaks= 200)
+
+#hist(seu[,seu@assays$HTO$counts[1,] > 1 & seu@assays$HTO$counts[1,] < 2000 & seu@meta.data$HTO_2_classification == 'Hashtag-C5']@assays$HTO$counts[1,], breaks= 200)
+```
+```{r}
+seu@meta.data$condition <- seu@meta.data$HTO_2_classification
+seu@meta.data$condition[seu@meta.data$condition == 'Hashtag-C5'] <- 'Mock'
+seu@meta.data$condition[seu@meta.data$condition == 'Hashtag-C6'] <- 'Mock'
+seu@meta.data$condition[seu@meta.data$condition == 'Hashtag-C7'] <- 'Tumour'
+seu@meta.data$condition[seu@meta.data$condition == 'Hashtag-C8'] <- 'Tumour'
+
+seu@meta.data$diet <- seu@meta.data$HTO_2_classification
+seu@meta.data$diet[seu@meta.data$diet == 'Hashtag-C5'] <- 'Ctrl'
+seu@meta.data$diet[seu@meta.data$diet == 'Hashtag-C6'] <- 'HF'
+seu@meta.data$diet[seu@meta.data$diet == 'Hashtag-C7'] <- 'Ctrl'
+seu@meta.data$diet[seu@meta.data$diet == 'Hashtag-C8'] <- 'HF'
+
+seu@meta.data$group <- paste(seu@meta.data$condition,seu@meta.data$diet, sep = '_')
+```
+
+```{r}
+seu$percent_mito <- PercentageFeatureSet(seu, pattern = "^mt-")
+seu$percent_ribo <- PercentageFeatureSet(seu, pattern = 'Rp[sl]')
+
+FeatureScatter(seu, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+FeatureScatter(seu, feature1 = "nCount_RNA", feature2 = "percent_mito")
+FeatureScatter(seu, feature1 = "nCount_RNA", feature2 = "percent_ribo")
+```
+```{r}
+seu <- subset(seu, subset = percent_mito < 4)
+seu <- subset(seu, subset = nFeature_RNA < 3000)
+#seu <- subset(seu, subset = nCount_RNA < 11000)
+seu <- subset(seu, subset = nFeature_RNA > 300)
+#seu <- subset(seu, subset = nFeature_RNA > 500)
+
+```
+
+
+```{r}
+FeatureScatter(seu, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+FeatureScatter(seu, feature1 = "nCount_RNA", feature2 = "percent_mito")
+FeatureScatter(seu, feature1 = "nCount_RNA", feature2 = "percent_ribo")
+```
+```{r}
+seu <- subset(seu, subset = HTO_2_classification.global == 'Singlet')
+
+ncol(seu)
+```
+
+```{r}
+FeatureScatter(seu, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+FeatureScatter(seu, feature1 = "nCount_RNA", feature2 = "percent_mito")
+```
+```{r}
+saveRDS(seu, '../output/qc.rds')
+```
+
+
+

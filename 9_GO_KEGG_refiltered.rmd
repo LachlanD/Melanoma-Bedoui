@@ -1,0 +1,383 @@
+---
+title: "9_Go_Kegg_refiltered_Ctrl"
+author: "Lachlan Dryburgh"
+date: "2024-03-21"
+output: html_document
+---
+
+```{r}
+library(Seurat)
+
+seu2 <- readRDS('../output/refiltered.rds')
+```
+
+```{r}
+library(clusterProfiler)
+library(enrichplot)
+library(DOSE)
+library("org.Mm.eg.db",  character.only = TRUE)
+```
+
+Ctrl Diet Kegg and Go
+```{r}
+seu2 <- SetIdent(seu2, value = 'diet')
+
+m0 <- FindMarkers(seu2, subset.ident = 'Ctrl', group.by = 'seurat_clusters', ident.1 = 0)
+m0.fc <- m0$avg_log2FC
+names(m0.fc) <- rownames(m0)
+
+gene_list0 = sort(m0.fc, decreasing = TRUE)
+
+gse0 <- gseGO(geneList=gene_list0, 
+             ont ="ALL", 
+             keyType = "SYMBOL", 
+             #nPerm = 10000, 
+             minGSSize = 3, 
+             maxGSSize = 800, 
+             pvalueCutoff = 0.05, 
+             verbose = TRUE, 
+             OrgDb = "org.Mm.eg.db", 
+             pAdjustMethod = "none")
+
+
+dotplot(gse0, showCategory=10, split=".sign") + facet_grid(.~.sign)
+```
+```{r}
+ids<-bitr(names(gene_list0), fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+
+dedup_ids = ids[!duplicated(ids[c("SYMBOL")]),]
+df2 <- m0[rownames(m0) %in% dedup_ids$SYMBOL,]
+
+df2 <- df2[order(rownames(df2)),]
+dedup_ids <- dedup_ids[order(dedup_ids$SYMBOL),]
+
+df2 <- cbind(df2,dedup_ids)
+
+
+kegg_gene_list <- df2$avg_log2FC
+names(kegg_gene_list) <- df2$ENTREZID
+kegg_gene_list<-na.omit(kegg_gene_list)
+kegg_gene_list = sort(kegg_gene_list, decreasing = TRUE)
+
+
+kk0 <- gseKEGG(geneList = kegg_gene_list,
+               organism     = "mmu",
+               #nPerm        = 10000,
+               minGSSize    = 3,
+               maxGSSize    = 800,
+               pvalueCutoff = 0.05,
+               pAdjustMethod = "none",
+               keyType       = "ncbi-geneid")
+
+
+dotplot(kk0, showCategory = 10, title = "Enriched Pathways" , split=".sign") + facet_grid(.~.sign)
+```
+
+```{r}
+m1 <- FindMarkers(seu2, subset.ident = 'Ctrl', group.by = 'seurat_clusters', ident.1 = 1)
+m1.fc <- m1$avg_log2FC
+names(m1.fc) <- rownames(m1)
+
+gene_list1 = sort(m1.fc, decreasing = TRUE)
+
+gse1 <- gseGO(geneList=gene_list1, 
+             ont ="ALL", 
+             keyType = "SYMBOL", 
+             #nPerm = 10000, 
+             minGSSize = 3, 
+             maxGSSize = 800, 
+             pvalueCutoff = 0.05, 
+             verbose = TRUE, 
+             OrgDb = "org.Mm.eg.db", 
+             pAdjustMethod = "none")
+
+
+dotplot(gse1, showCategory=10, split=".sign") + facet_grid(.~.sign)
+```
+
+
+```{r}
+ids<-bitr(names(gene_list1), fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+
+dedup_ids = ids[!duplicated(ids[c("SYMBOL")]),]
+df2 <- m1[rownames(m1) %in% dedup_ids$SYMBOL,]
+
+df2 <- df2[order(rownames(df2)),]
+dedup_ids <- dedup_ids[order(dedup_ids$SYMBOL),]
+
+df2 <- cbind(df2,dedup_ids)
+
+
+kegg_gene_list <- df2$avg_log2FC
+names(kegg_gene_list) <- df2$ENTREZID
+kegg_gene_list<-na.omit(kegg_gene_list)
+kegg_gene_list = sort(kegg_gene_list, decreasing = TRUE)
+
+
+kk1 <- gseKEGG(geneList = kegg_gene_list,
+               organism     = "mmu",
+               #nPerm        = 10000,
+               minGSSize    = 3,
+               maxGSSize    = 800,
+               pvalueCutoff = 0.05,
+               pAdjustMethod = "none",
+               keyType       = "ncbi-geneid")
+
+
+dotplot(kk1, showCategory = 10, title = "Enriched Pathways" , split=".sign") + facet_grid(.~.sign)
+```
+
+```{r}
+m2 <- FindMarkers(seu2, subset.ident = 'Ctrl', group.by = 'seurat_clusters', ident.1 = 2)
+m2.fc <- m2$avg_log2FC
+names(m2.fc) <- rownames(m2)
+
+gene_list2 = sort(m2.fc, decreasing = TRUE)
+
+gse2 <- gseGO(geneList=gene_list2, 
+             ont ="ALL", 
+             keyType = "SYMBOL", 
+             #nPerm = 10000, 
+             minGSSize = 3, 
+             maxGSSize = 800, 
+             pvalueCutoff = 0.05, 
+             verbose = TRUE, 
+             OrgDb = "org.Mm.eg.db", 
+             pAdjustMethod = "none")
+
+
+dotplot(gse2, showCategory=10, split=".sign") + facet_grid(.~.sign)
+```
+```{r}
+ids<-bitr(names(gene_list2), fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+
+dedup_ids = ids[!duplicated(ids[c("SYMBOL")]),]
+df2 <- m2[rownames(m2) %in% dedup_ids$SYMBOL,]
+
+df2 <- df2[order(rownames(df2)),]
+dedup_ids <- dedup_ids[order(dedup_ids$SYMBOL),]
+
+df2 <- cbind(df2,dedup_ids)
+
+
+kegg_gene_list <- df2$avg_log2FC
+names(kegg_gene_list) <- df2$ENTREZID
+kegg_gene_list<-na.omit(kegg_gene_list)
+kegg_gene_list = sort(kegg_gene_list, decreasing = TRUE)
+
+
+kk2 <- gseKEGG(geneList = kegg_gene_list,
+               organism     = "mmu",
+               #nPerm        = 10000,
+               minGSSize    = 3,
+               maxGSSize    = 800,
+               pvalueCutoff = 0.05,
+               pAdjustMethod = "none",
+               keyType       = "ncbi-geneid")
+
+
+dotplot(kk2, showCategory = 10, title = "Enriched Pathways" , split=".sign") + facet_grid(.~.sign)
+```
+
+
+```{r}
+m3 <- FindMarkers(seu2, subset.ident = 'Ctrl', group.by = 'seurat_clusters', ident.1 = 3)
+m3.fc <- m3$avg_log2FC
+names(m3.fc) <- rownames(m3)
+
+gene_list3 = sort(m3.fc, decreasing = TRUE)
+
+gse3 <- gseGO(geneList=gene_list3, 
+             ont ="ALL", 
+             keyType = "SYMBOL", 
+             #nPerm = 10000, 
+             minGSSize = 3, 
+             maxGSSize = 800, 
+             pvalueCutoff = 0.05, 
+             verbose = TRUE, 
+             OrgDb = "org.Mm.eg.db", 
+             pAdjustMethod = "none")
+
+
+dotplot(gse3, showCategory=10, split=".sign") + facet_grid(.~.sign)
+```
+```{r}
+ids<-bitr(names(gene_list3), fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+
+dedup_ids = ids[!duplicated(ids[c("SYMBOL")]),]
+df2 <- m3[rownames(m3) %in% dedup_ids$SYMBOL,]
+
+df2 <- df2[order(rownames(df2)),]
+dedup_ids <- dedup_ids[order(dedup_ids$SYMBOL),]
+
+df2 <- cbind(df2,dedup_ids)
+
+
+kegg_gene_list <- df2$avg_log2FC
+names(kegg_gene_list) <- df2$ENTREZID
+kegg_gene_list<-na.omit(kegg_gene_list)
+kegg_gene_list = sort(kegg_gene_list, decreasing = TRUE)
+
+
+kk3 <- gseKEGG(geneList = kegg_gene_list,
+               organism     = "mmu",
+               #nPerm        = 10000,
+               minGSSize    = 3,
+               maxGSSize    = 800,
+               pvalueCutoff = 0.05,
+               pAdjustMethod = "none",
+               keyType       = "ncbi-geneid")
+
+
+dotplot(kk3, showCategory = 10, title = "Enriched Pathways" , split=".sign") + facet_grid(.~.sign)
+```
+
+```{r}
+m4 <- FindMarkers(seu2, subset.ident = 'Ctrl', group.by = 'seurat_clusters', ident.1 = 4)
+m4.fc <- m4$avg_log2FC
+names(m4.fc) <- rownames(m4)
+
+gene_list4 = sort(m4.fc, decreasing = TRUE)
+
+gse4 <- gseGO(geneList=gene_list2, 
+             ont ="ALL", 
+             keyType = "SYMBOL", 
+             #nPerm = 10000, 
+             minGSSize = 3, 
+             maxGSSize = 800, 
+             pvalueCutoff = 0.05, 
+             verbose = TRUE, 
+             OrgDb = "org.Mm.eg.db", 
+             pAdjustMethod = "none")
+
+
+dotplot(gse4, showCategory=10, split=".sign") + facet_grid(.~.sign)
+```
+```{r}
+ids<-bitr(names(gene_list4), fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+
+dedup_ids = ids[!duplicated(ids[c("SYMBOL")]),]
+df2 <- m4[rownames(m4) %in% dedup_ids$SYMBOL,]
+
+df2 <- df2[order(rownames(df2)),]
+dedup_ids <- dedup_ids[order(dedup_ids$SYMBOL),]
+
+df2 <- cbind(df2,dedup_ids)
+
+
+kegg_gene_list <- df2$avg_log2FC
+names(kegg_gene_list) <- df2$ENTREZID
+kegg_gene_list<-na.omit(kegg_gene_list)
+kegg_gene_list = sort(kegg_gene_list, decreasing = TRUE)
+
+
+kk4 <- gseKEGG(geneList = kegg_gene_list,
+               organism     = "mmu",
+               #nPerm        = 10000,
+               minGSSize    = 3,
+               maxGSSize    = 800,
+               pvalueCutoff = 0.05,
+               pAdjustMethod = "none",
+               keyType       = "ncbi-geneid")
+
+
+dotplot(kk4, showCategory = 10, title = "Enriched Pathways" , split=".sign") + facet_grid(.~.sign)
+```
+
+```{r}
+m5 <- FindMarkers(seu2, subset.ident = 'Ctrl', group.by = 'seurat_clusters', ident.1 = 5)
+m5.fc <- m5$avg_log2FC
+names(m5.fc) <- rownames(m5)
+
+gene_list5 = sort(m5.fc, decreasing = TRUE)
+
+gse5 <- gseGO(geneList=gene_list5, 
+             ont ="ALL", 
+             keyType = "SYMBOL", 
+             #nPerm = 10000, 
+             minGSSize = 3, 
+             maxGSSize = 800, 
+             pvalueCutoff = 0.05, 
+             verbose = TRUE, 
+             OrgDb = "org.Mm.eg.db", 
+             pAdjustMethod = "none")
+
+
+dotplot(gse5, showCategory=10, split=".sign") + facet_grid(.~.sign)
+```
+```{r}
+ids<-bitr(names(gene_list5), fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+
+dedup_ids = ids[!duplicated(ids[c("SYMBOL")]),]
+df2 <- m5[rownames(m5) %in% dedup_ids$SYMBOL,]
+
+df2 <- df2[order(rownames(df2)),]
+dedup_ids <- dedup_ids[order(dedup_ids$SYMBOL),]
+
+df2 <- cbind(df2,dedup_ids)
+
+
+kegg_gene_list <- df2$avg_log2FC
+names(kegg_gene_list) <- df2$ENTREZID
+kegg_gene_list<-na.omit(kegg_gene_list)
+kegg_gene_list = sort(kegg_gene_list, decreasing = TRUE)
+
+
+kk5 <- gseKEGG(geneList = kegg_gene_list,
+               organism     = "mmu",
+               #nPerm        = 10000,
+               minGSSize    = 3,
+               maxGSSize    = 800,
+               pvalueCutoff = 0.05,
+               pAdjustMethod = "none",
+               keyType       = "ncbi-geneid")
+
+
+dotplot(kk5, showCategory = 10, title = "Enriched Pathways" , split=".sign") + facet_grid(.~.sign)
+```
+
+```{r}
+library(openxlsx)
+
+wb = createWorkbook()
+addWorksheet(wb, 'cluster 0')
+writeData(wb, 'cluster 0', x = gse0)
+
+addWorksheet(wb, 'cluster 1')
+writeData(wb, 'cluster 1', x = gse1)
+
+addWorksheet(wb, 'cluster 2')
+writeData(wb, 'cluster 2', x = gse2)
+
+addWorksheet(wb, 'cluster 3')
+writeData(wb, 'cluster 3', x = gse3)
+
+addWorksheet(wb, 'cluster 4')
+writeData(wb, 'cluster 4', x = gse4)
+
+addWorksheet(wb, 'cluster 5')
+writeData(wb, 'cluster 5', x = gse5)
+saveWorkbook(wb, '../output/refiltered_go_terms.xlsx', overwrite = T)
+```
+
+```{r}
+wb = createWorkbook()
+addWorksheet(wb, 'cluster 0')
+writeData(wb, 'cluster 0', x = kk0)
+
+addWorksheet(wb, 'cluster 1')
+writeData(wb, 'cluster 1', x = kk1)
+
+addWorksheet(wb, 'cluster 2')
+writeData(wb, 'cluster 2', x = kk2)
+
+addWorksheet(wb, 'cluster 3')
+writeData(wb, 'cluster 3', x = kk3)
+
+addWorksheet(wb, 'cluster 4')
+writeData(wb, 'cluster 4', x = kk4)
+
+addWorksheet(wb, 'cluster 5')
+writeData(wb, 'cluster 5', x = kk5)
+saveWorkbook(wb, '../output/refiltered_keg.xlsx', overwrite = T)
+```

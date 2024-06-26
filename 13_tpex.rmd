@@ -1,0 +1,224 @@
+---
+title: "Subcluster"
+author: "Lachlan Dryburgh"
+date: "2024-05-20"
+output: html_document
+---
+
+```{r}
+library(Seurat)
+
+seu3 <- readRDS('../output/refiltered.rds')
+```
+
+```{r}
+DimPlot(seu3)
+
+seu_tpex <- subset(seu3, subset = seurat_clusters == 3)
+
+DimPlot(seu_tpex, split.by = 'diet')
+```
+```{r}
+seu_tpex <- NormalizeData(seu_tpex)
+seu_tpex <- FindVariableFeatures(seu_tpex)
+seu_tpex <- ScaleData(seu_tpex)
+
+seu_tpex <- RunPCA(seu_tpex)
+
+DimPlot(seu_tpex, reduction = 'pca', split.by = 'diet')
+
+seu_tpex <- RunUMAP(seu_tpex, dims = 1:10)
+
+DimPlot(seu_tpex, reduction = 'umap', split.by = 'diet')
+
+FeaturePlot(seu_tpex, features = 'Pdcd1')
+```
+
+```{r}
+seu_tpex <- FindNeighbors(seu_tpex, dims = 1:3)
+seu_tpex <- FindClusters(seu_tpex, resolution =  0.3)
+
+DimPlot(seu_tpex)
+DimPlot(seu_tpex, split.by = 'diet')
+
+```
+```{r}
+FeaturePlot(seu_tpex, features = 'Pdcd1', split.by = 'seurat_clusters')
+FeaturePlot(seu_tpex, features = 'Lag3', split.by = 'seurat_clusters')
+
+FeaturePlot(seu_tpex, features = 'Foxo1', split.by = 'seurat_clusters')
+FeaturePlot(seu_tpex, features = 'Bach2', split.by = 'seurat_clusters')
+FeaturePlot(seu_tpex, features = 'Ikzf2', split.by = 'seurat_clusters')
+
+
+```
+
+```{r}
+m <- FindMarkers(seu_tpex, ident.1 = 2)
+```
+
+```{r}
+FeaturePlot(seu_tpex, features = 'Tox', split.by = 'seurat_clusters')
+
+```
+
+```{r}
+pc2 <- seu_tpex@reductions$pca@feature.loadings[,2]
+pc2 <- pc2[order(abs(pc2), decreasing = T)]
+
+FeaturePlot(seu_tpex, features = 'Eif5a', reduction = 'pca')
+```
+
+```{r}
+DimPlot(seu3, cells.highlight =  colnames(seu_tpex[,seu_tpex$seurat_clusters == 2]))
+DimPlot(seu3, cells.highlight =  colnames(seu_tpex[,seu_tpex$seurat_clusters == 2]), split.by = 'diet')
+
+```
+
+
+```{r}
+
+
+tf_stem <- read.table("stem/output/Step2_regulonTargetsInfo.tsv", header = T)
+tf_tpex <- read.table("tpex/output/Step2_regulonTargetsInfo.tsv", header = T) 
+
+stem_foxo1 <- tf_stem[tf_stem$TF == 'Foxo1',]# & tf_stem$highConfAnnot == TRUE,]
+stem_foxo1 <- stem_foxo1[order(stem_foxo1$CoexWeight, decreasing = T),]
+
+tpex_foxo1 <- tf_tpex[tf_tpex$TF == 'Foxo1',]# & tf_tpex$highConfAnnot == TRUE,]
+tpex_foxo1 <- tpex_foxo1[order(tpex_foxo1$CoexWeight, decreasing = T),]
+
+stem_bach2 <- tf_stem[tf_stem$TF == 'Bach2',]
+stem_bach2 <- stem_bach2[order(stem_bach2$CoexWeight, decreasing = T),]
+
+tpex_bach2 <- tf_tpex[tf_tpex$TF == 'Bach2',]
+tpex_bach2 <- tpex_bach2[order(tpex_bach2$CoexWeight, decreasing = T),]
+
+stem_ikzf2 <- tf_stem[tf_stem$TF == 'Ikzf2',]
+stem_ikzf2 <- stem_ikzf2[order(stem_ikzf2$CoexWeight, decreasing = T),]
+
+tpex_ikzf2 <- tf_tpex[tf_tpex$TF == 'Ikzf2',]
+tpex_ikzf2 <- tpex_ikzf2[order(tpex_ikzf2$CoexWeight, decreasing = T),]
+
+library(openxlsx)
+wb = createWorkbook()
+addWorksheet(wb, 'Stem_Foxo1')
+writeData(wb, 'Stem_Foxo1', x = stem_foxo1)
+
+addWorksheet(wb, 'Tpex_Foxo1')
+writeData(wb, 'Tpex_Foxo1', x = tpex_foxo1)
+
+addWorksheet(wb, 'Stem_Bach2')
+writeData(wb, 'Stem_Bach2', x = stem_bach2)
+
+addWorksheet(wb, 'Tpex_Bach2')
+writeData(wb, 'Tpex_Bach2', x = tpex_bach2)
+
+addWorksheet(wb, 'Stem_Ikzf2')
+writeData(wb, 'Stem_Ikzf2', x = stem_ikzf2)
+
+addWorksheet(wb, 'Tpex_Ikzf2')
+writeData(wb, 'Tpex_Ikzf2', x = tpex_ikzf2)
+saveWorkbook(wb, '../output/tpex_tf.xlsx', overwrite = T)
+```
+
+```{r}
+seu_tpex <- AddModuleScore(seu_tpex, features = list(tf_stem$TF), name = "fox1_stem")
+seu_tpex <- AddModuleScore(seu_tpex, features = list(tf_tpex$TF), name = "fox1_tpex")
+
+FeaturePlot(seu_tpex, features = "fox1_stem1") +
+FeaturePlot(seu_tpex, features = "fox1_tpex1")
+```
+
+```{r}
+library(clusterProfiler)
+library("org.Mm.eg.db",  character.only = TRUE)
+library(DOSE)
+
+stem_foxo1_ids <-bitr(stem_foxo1$gene, fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+tpex_foxo1_ids <-bitr(tpex_foxo1$gene, fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+
+stem_foxo1_go <- enrichGO(stem_foxo1$gene, OrgDb = 'org.Mm.eg.db', keyType = "SYMBOL")
+stem_foxo1_kegg <- enrichKEGG(stem_foxo1_ids$ENTREZID, organism = 'mmu')
+
+tpex_foxo1_go <- enrichGO(tpex_foxo1$gene, OrgDb = 'org.Mm.eg.db', keyType = "SYMBOL")
+tpex_foxo1_kegg <- enrichKEGG(tpex_foxo1_ids$ENTREZID, organism = 'mmu')
+
+dotplot(tpex_foxo1_go, showCategory = 10, title = "Enriched Pathways" )
+#dotplot(stem_foxo1_go, showCategory = 10, title = "Enriched Pathways" )
+
+dotplot(tpex_foxo1_kegg, showCategory = 10, title = "Enriched Pathways" )
+#dotplot(stem_foxo1_kegg, showCategory = 10, title = "Enriched Pathways" )
+
+```
+```{r}
+library(ggplot2)
+
+cell_count <- ncol(seu_tpex)
+
+set.seed(632024)
+subs <- sample(1:3, cell_count, replace = T)
+
+
+seu_tpex$sample <- as.factor(paste(seu_tpex$group, subs,  sep = '_'))
+
+df <- seu_tpex@meta.data
+
+ggplot(df, aes(x = diet, fill = seurat_clusters)) +
+  geom_bar(position = "fill", group = 'group') +
+  scale_fill_viridis_d(option = 'turbo')
+
+ggplot(df, aes(x = sample, fill = seurat_clusters)) +
+  geom_bar(position = "fill", group = 'group') +
+  scale_fill_viridis_d(option = 'turbo')
+```
+```{r}
+library(speckle)
+
+
+seu_tpex <- SetIdent(seu_tpex, value = 'seurat_clusters')
+prop <- propeller(x = seu_tpex)
+
+
+props <- getTransformedProps(seu_tpex$seurat_clusters, seu_tpex$sample, transform="logit")
+
+
+barplot(props$Proportions, legend=TRUE, 
+        ylab="Proportions")
+
+plotCellTypeMeanVar(props$Counts)
+
+prop
+```
+```{r}
+saveRDS(seu_tpex, "../output/tpex.rds")
+```
+```{r}
+library(openxlsx)
+tpex2 <- readWorkbook("~/projects/Utzschneider_Catarina_P14/data/Supplementary Table 3 - stemness signature.xlsx", startRow = 2) 
+
+summary(tpex2$avg_log2FC)
+
+seu3 <- AddModuleScore(seu3, features = list(tpex2$X1), name = 'Tpex Sig')
+
+FeaturePlot(seu3, features = 'Tpex Sig1')
+VlnPlot(seu3, features = 'Tpex Sig1')
+VlnPlot(seu3, features = 'Tpex Sig1', split.by ='diet')
+
+
+seu_tpex <- AddModuleScore(seu_tpex, features = list(tpex2$X1), name = 'Tpex Sig')
+
+FeaturePlot(seu_tpex, features = 'Tpex Sig1')
+VlnPlot(seu_tpex, features = 'Tpex Sig1')
+VlnPlot(seu_tpex, features = 'Tpex Sig1', split.by ='diet')
+```
+```{r}
+naive <- read.csv('naive_sig.csv')
+
+seu3 <- AddModuleScore(seu3, features = naive$X, name = 'Naive Sig')
+FeaturePlot(seu3, features = 'Naive Sig1')
+VlnPlot(seu3, features = 'Naive Sig1')
+VlnPlot(seu3, features = 'Naive Sig1', split.by = 'diet')
+
+```
+

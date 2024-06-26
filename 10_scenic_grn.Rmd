@@ -1,0 +1,64 @@
+#title: "10_scenic_grn"
+#author: "Lachlan Dryburgh"
+#date: "2024-04-04"
+
+
+```{r}
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(SCENIC)
+  library(AUCell)
+  library(RcisTarget)
+  #library(SCopeLoomR)
+  library(KernSmooth)
+  library(BiocParallel)
+  library(ggplot2)
+  library(data.table)
+  library(grid)
+  library(ComplexHeatmap)
+})
+```
+
+```{r}
+seu3 <- readRDS('../output/refiltered.rds')
+
+seu3_hf <- subset(seu3, subset = diet=="HF")
+
+org <- "mgi" # or hgnc, or dmel
+dbDir <- "cisTarget_databases" # RcisTarget databases location
+myDatasetTitle <- "SCENIC melenoma HF" # choose a name for your analysis
+data(motifAnnotations_mgi)
+motifAnnotations <- motifAnnotations_mgi
+#dbs <- c("mm10__refseq-r80__10kb_up_and_down_tss.mc9nr.genes_vs_motifs.rankings.feather")
+dbs <- defaultDbNames[[org]]
+
+
+scenicOptions <- initializeScenic(org=org, dbDir=dbDir, dbs = dbs, datasetTitle=myDatasetTitle, nCores=4) 
+```
+
+```{r}
+exprMat <- as.array(seu3@assays$RNA$counts)
+
+genesKept <- geneFiltering(exprMat, scenicOptions=scenicOptions,
+                           minCountsPerGene=3*.01*ncol(exprMat),
+                           minSamples=ncol(exprMat)*.01)
+
+exprMat_filtered <- exprMat[genesKept, ]
+runCorrelation(exprMat_filtered, scenicOptions)
+```
+
+```{r}
+exprMat_filtered_log <- log2(exprMat_filtered+1) 
+runGenie3(exprMat_filtered_log, scenicOptions)
+
+exprMat_log <- log2(exprMat+1)
+
+scenicOptions <- runSCENIC_1_coexNetwork2modules(scenicOptions)
+scenicOptions <- runSCENIC_2_createRegulons(scenicOptions)
+scenicOptions <- runSCENIC_3_scoreCells(scenicOptions, exprMat_log)
+
+scenicOptions <- runSCENIC_4_aucell_binarize(scenicOptions)
+tsneAUC(scenicOptions, aucType="AUC")
+
+saveRDS(scenicOptions, file="../scenic/scenic/int/scenicOptions.Rds") 
+```

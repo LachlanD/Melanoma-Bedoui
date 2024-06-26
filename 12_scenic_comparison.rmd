@@ -1,0 +1,314 @@
+---
+title: "12_Scenic_comparsison"
+author: "Lachlan Dryburgh"
+date: "2024-04-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library(Seurat)
+library(SCENIC)
+library(VennDiagram)
+```
+
+```{r}
+c0 <- read.table('../scenic/c0/output/Step2_regulonTargetsInfo.tsv', header = T)
+c1 <- read.table('../scenic/c1/output/Step2_regulonTargetsInfo.tsv', header = T)
+c2 <- read.table('../scenic/c2/output/Step2_regulonTargetsInfo.tsv', header = T)
+c3 <- read.table('../scenic/c3/output/Step2_regulonTargetsInfo.tsv', header = T)
+c4 <- read.table('../scenic/c4/output/Step2_regulonTargetsInfo.tsv', header = T)
+c5 <- read.table('../scenic/c5/output/Step2_regulonTargetsInfo.tsv', header = T)
+h0 <- read.table('../scenic/h0/output/Step2_regulonTargetsInfo.tsv', header = T)
+h1 <- read.table('../scenic/h1/output/Step2_regulonTargetsInfo.tsv', header = T)
+h2 <- read.table('../scenic/h2/output/Step2_regulonTargetsInfo.tsv', header = T)
+h3 <- read.table('../scenic/h3/output/Step2_regulonTargetsInfo.tsv', header = T)
+h4 <- read.table('../scenic/h4/output/Step2_regulonTargetsInfo.tsv', header = T)
+h5 <- read.table('../scenic/h5/output/Step2_regulonTargetsInfo.tsv', header = T)
+
+seu3 <- readRDS('../output/refiltered.rds')
+```
+
+
+```{r}
+c0.regulons <- unique(c0[c0$highConfAnnot ==T,]$TF)
+c1.regulons <- unique(c1[c1$highConfAnnot ==T,]$TF)
+c2.regulons <- unique(c2[c2$highConfAnnot ==T,]$TF)
+c3.regulons <- unique(c3[c3$highConfAnnot ==T,]$TF)
+c4.regulons <- unique(c4[c4$highConfAnnot ==T,]$TF)
+c5.regulons <- unique(c5[c5$highConfAnnot ==T,]$TF)
+h0.regulons <- unique(h0[h0$highConfAnnot ==T,]$TF)
+h1.regulons <- unique(h1[h1$highConfAnnot ==T,]$TF)
+h2.regulons <- unique(h2[h2$highConfAnnot ==T,]$TF)
+h3.regulons <- unique(h3[h3$highConfAnnot ==T,]$TF)
+h4.regulons <- unique(h4[h4$highConfAnnot ==T,]$TF)
+h5.regulons <- unique(h5[h5$highConfAnnot ==T,]$TF)
+
+venn.diagram(x = list(c0.regulons, h0.regulons),  category.names = c('ctrl', 'hf'), filename = 'figures/regulons_cluster0.png', output=T, disable.logging = T)
+venn.diagram(x = list(c1.regulons, h1.regulons),  category.names = c('ctrl', 'hf'), filename = 'figures/regulons_cluster1.png', output=T, disable.logging = T)
+venn.diagram(x = list(c2.regulons, h2.regulons),  category.names = c('ctrl', 'hf'), filename = 'figures/regulons_cluster2.png', output=T, disable.logging = T)
+venn.diagram(x = list(c3.regulons, h3.regulons),  category.names = c('ctrl', 'hf'), filename = 'figures/regulons_cluster3.png', output=T, disable.logging = T)
+venn.diagram(x = list(c4.regulons, h4.regulons),  category.names = c('ctrl', 'hf'), filename = 'figures/regulons_cluster4.png', output=T, disable.logging = T)
+venn.diagram(x = list(c5.regulons, h5.regulons),  category.names = c('ctrl', 'hf'), filename = 'figures/regulons_cluster5.png', output=T, disable.logging = T)
+
+
+```
+
+
+
+```{r}
+c0.foxo1 <- c0[c0$TF == 'Foxo1' & c0$highConfAnnot == T,]
+h0.foxo1 <- h0[h0$TF == 'Foxo1' & h0$highConfAnnot == T,]
+
+venn.diagram(x = list(c0.foxo1$gene, h0.foxo1$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/foxo1_cluster0.png', disable.logging = T)
+
+c1.foxo1 <- c1[c1$TF == 'Foxo1' & c1$highConfAnnot == T,]
+h1.foxo1 <- h1[h1$TF == 'Foxo1' & h1$highConfAnnot == T,]
+
+venn.diagram(x = list(c1.foxo1$gene, h1.foxo1$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/foxo1_cluster1.png', disable.logging = T)
+
+c2.foxo1 <- c2[c2$TF == 'Foxo1' & c2$highConfAnnot == T,]
+h2.foxo1 <- h2[h2$TF == 'Foxo1' & h2$highConfAnnot == T,]
+
+venn.diagram(x = list(c2.foxo1$gene, h2.foxo1$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/foxo1_cluster2.png', disable.logging = T)
+
+c3.foxo1 <- c3[c3$TF == 'Foxo1' & c3$highConfAnnot == T,]
+h3.foxo1 <- h3[h3$TF == 'Foxo1' & h3$highConfAnnot == T,]
+
+venn.diagram(x = list(c3.foxo1$gene, h3.foxo1$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/foxo1_cluster3.png', disable.logging = T)
+
+c4.foxo1 <- c4[c4$TF == 'Foxo1' & c4$highConfAnnot == T,]
+h4.foxo1 <- h4[h4$TF == 'Foxo1' & h4$highConfAnnot == T,]
+
+venn.diagram(x = list(c4.foxo1$gene, h4.foxo1$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/foxo1_cluster4.png', disable.logging = T)
+
+c5.foxo1 <- c5[c5$TF == 'Foxo1' & c5$highConfAnnot == T,]
+h5.foxo1 <- h5[h5$TF == 'Foxo1' & h5$highConfAnnot == T,]
+
+venn.diagram(x = list(c5.foxo1$gene, h5.foxo1$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/foxo1_cluster5.png', disable.logging = T)
+```
+
+```{r}
+c0.Ikzf2 <- c0[c0$TF == 'Ikzf2' & c0.Ikzf2$highConfAnnot == T,]
+h0.Ikzf2 <- h0[h0$TF == 'Ikzf2' & h0.Ikzf2$highConfAnnot == T,]
+
+venn.diagram(x = list(c0.Ikzf2$gene, h0.Ikzf2$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/Ikzf2_cluster0.png', output=T, disable.logging = T)
+
+c1.Ikzf2 <- c1[c1$TF == 'Ikzf2' & c1.Ikzf2$highConfAnnot == T,]
+h1.Ikzf2 <- h1[h1$TF == 'Ikzf2' & h1.Ikzf2$highConfAnnot == T,]
+
+venn.diagram(x = list(c1.Ikzf2$gene, h1.Ikzf2$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/Ikzf2_cluster1.png', output=T, disable.logging = T)
+
+c2.Ikzf2 <- c2[c2$TF == 'Ikzf2' & c2.Ikzf2$highConfAnnot == T,]
+h2.Ikzf2 <- h2[h2$TF == 'Ikzf2' & h2.Ikzf2$highConfAnnot == T,]
+
+venn.diagram(x = list(c2.Ikzf2$gene, h2.Ikzf2$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/Ikzf2_cluster2.png', output=T, disable.logging = T)
+
+c3.Ikzf2 <- c3[c3$TF == 'Ikzf2' & c3.Ikzf2$highConfAnnot == T,]
+h3.Ikzf2 <- h3[h3$TF == 'Ikzf2' & h3.Ikzf2$highConfAnnot == T,]
+
+#venn.diagram(x = list(c3.Ikzf2$gene, h3.Ikzf2$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/Ikzf2_cluster3.png', output=T, disable.logging = T)
+
+c4.Ikzf2 <- c4[c4$TF == 'Ikzf2' & c4.Ikzf2$highConfAnnot == T,]
+h4.Ikzf2 <- h4[h4$TF == 'Ikzf2' & h4.Ikzf2$highConfAnnot == T,]
+
+venn.diagram(x = list(c4.Ikzf2$gene, h4.Ikzf2$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/Ikzf2_cluster4.png', output=T, disable.logging = T)
+
+c5.Ikzf2 <- c5[c5$TF == 'Ikzf2' & c5.Ikzf2$highConfAnnot == T,]
+h5.Ikzf2 <- h5[h5$TF == 'Ikzf2' & h5.Ikzf2$highConfAnnot == T,]
+
+#venn.diagram(x = list(c5.Ikzf2$gene, h5.Ikzf2$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/Ikzf2_cluster5.png', output=T, disable.logging = T)
+
+venn.diagram(x = list(h0.Ikzf2$gene, h1.Ikzf2$gene, h3.Ikzf2$gene, h4.Ikzf2$gene, h5.Ikzf2$gene),  category.names = 1:5, filename = 'figures/Ikzf2_h.png', output=T, disable.logging = T)
+```
+
+```{r}
+c0.Bach2 <- c0[c0$TF == 'Bach2' & c0.Bach2$highConfAnnot == T,]
+h0.Bach2 <- h0[h0$TF == 'Bach2' & h0.Bach2$highConfAnnot == T,]
+
+#venn.diagram(x = list(c0.Bach2$gene, h0.Bach2$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/Bach2_cluster0.png', output=T, disable.logging = T)
+
+c1.Bach2 <- c1[c1$TF == 'Bach2' & c1.Bach2$highConfAnnot == T,]
+h1.Bach2 <- h1[h1$TF == 'Bach2' & h1.Bach2$highConfAnnot == T,]
+
+#venn.diagram(x = list(c1.Bach2$gene, h1.Bach2$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/Bach2_cluster1.png', output=T, disable.logging = T)
+
+c2.Bach2 <- c2[c2$TF == 'Bach2' & c2.Bach2$highConfAnnot == T,]
+h2.Bach2 <- h2[h2$TF == 'Bach2' & h2.Bach2$highConfAnnot == T,]
+
+#venn.diagram(x = list(c2.Bach2$gene, h2.Bach2$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/Bach2_cluster2.png', output=T, disable.logging = T)
+
+c3.Bach2 <- c3[c3$TF == 'Bach2' & c3.Bach2$highConfAnnot == T,]
+h3.Bach2 <- h3[h3$TF == 'Bach2' & h3.Bach2$highConfAnnot == T,]
+
+#venn.diagram(x = list(c3.Bach2$gene, h3.Bach2$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/Bach2_cluster3.png', output=T, disable.logging = T)
+
+c4.Bach2 <- c4[c4$TF == 'Bach2' & c4.Bach2$highConfAnnot == T,]
+h4.Bach2 <- h4[h4$TF == 'Bach2' & h4.Bach2$highConfAnnot == T,]
+
+#venn.diagram(x = list(c4.Bach2$gene, h4.Bach2$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/Bach2_cluster4.png', output=T)
+
+c5.Bach2 <- c5[c5$TF == 'Bach2' & c5.Bach2$highConfAnnot == T,]
+h5.Bach2 <- h5[h5$TF == 'Bach2' & h5.Bach2$highConfAnnot == T,]
+
+venn.diagram(x = list(c5.Bach2$gene, h5.Bach2$gene),  category.names = c('ctrl', 'hf'), filename = 'figures/Bach2_cluster5.png', output=T, disable.logging = T)
+```
+
+```{r}
+s0 <- c0.foxo1$gene[c0.foxo1$gene %in% h0.foxo1$gene]
+s1 <- c1.foxo1$gene[c1.foxo1$gene %in% h1.foxo1$gene]
+
+sum(s0 %in% s1)
+length(s0)
+
+
+c0_only <- c0.foxo1$gene[!(c0.foxo1$gene %in% h0.foxo1$gene)]
+```
+
+```{r}
+
+venn.diagram(x = list(c0.foxo1$gene, c1.foxo1$gene, c2.foxo1$gene, c3.foxo1$gene, c4.foxo1$gene),  category.names = 0:4, filename = 'figures/ctrl_fox1.png', output=T, disable.logging = T)
+```
+
+```{r}
+venn.diagram(x= list(c0.regulons, c1.regulons, c2.regulons, c3.regulons, c4.regulons), category.names = 0:4, filename = 'figures/reg_c.png', output = T, disable.logging = T)
+
+
+c0.regulons[c0.regulons %in% c1.regulons & c0.regulons %in% c2.regulons & c0.regulons %in%c3.regulons & c0.regulons %in% c4.regulons & c0.regulons %in% c5.regulons]
+
+venn.diagram(x= list(h0.regulons, h1.regulons, h2.regulons, h3.regulons, h4.regulons), category.names = 0:4, filename = 'figures/reg_h.png', output = T, disable.logging = T)
+
+
+h0.regulons[h0.regulons %in% h1.regulons & h0.regulons %in% h2.regulons & h0.regulons %in% h3.regulons & h0.regulons %in% h4.regulons & h0.regulons %in% h5.regulons]
+```
+```{r}
+DimPlot(seu3, group.by = "seurat_clusters")
+
+gs_c2 <- c2.foxo1$gene[!(c2.foxo1$gene %in% h2.foxo1$gene)]
+gs_h2 <- h2.foxo1$gene[!(h2.foxo1$gene %in% c2.foxo1$gene)]
+gs_b2 <- c2.foxo1$gene[h2.foxo1$gene %in% c2.foxo1$gene]
+
+gs_c4 <- c4.foxo1$gene[!(c4.foxo1$gene %in% h4.foxo1$gene)]
+gs_h4 <- h4.foxo1$gene[!(h4.foxo1$gene %in% c4.foxo1$gene)]
+
+library(clusterProfiler)
+library("org.Mm.eg.db",  character.only = TRUE)
+library(DOSE)
+
+c2.ids<-bitr(gs_c2, fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+h2.ids<-bitr(gs_h2, fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+
+
+
+c2_go <- enrichGO(gs_c2, OrgDb = 'org.Mm.eg.db', keyType = "SYMBOL")
+c2_kegg <- enrichKEGG(c2.ids$ENTREZID, organism = 'mmu')
+
+h2_go <- enrichGO(gs_h2, OrgDb = 'org.Mm.eg.db', keyType = "SYMBOL")
+h2_kegg <- enrichKEGG(h2.ids$ENTREZID, organism = 'mmu')
+
+b2_go <- enrichGO(gs_b2, OrgDb = 'org.Mm.eg.db', keyType = "SYMBOL")
+
+
+
+c4.ids<-bitr(gs_c4, fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+h4.ids<-bitr(gs_h4, fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+
+c4_go <- enrichGO(gs_c4, OrgDb = 'org.Mm.eg.db', keyType = "SYMBOL")
+c4_kegg <- enrichKEGG(c4.ids$ENTREZID, organism = 'mmu')
+
+h4_go <- enrichGO(gs_h4, OrgDb = 'org.Mm.eg.db', keyType = "SYMBOL")
+h4_kegg <- enrichKEGG(h4.ids$ENTREZID, organism = 'mmu')
+```
+```{r}
+library(enrichplot)
+barplot(c2_go, showCategory=10) 
+barplot(c2_kegg, showCategory=10) 
+barplot(b2_go, showCategory = 10)
+
+
+barplot(h2_go, showCategory=10) 
+barplot(h2_kegg, showCategory=10) 
+
+barplot(c4_go, showCategory=10) 
+#barplot(c4_kegg, showCategory=10) 
+
+barplot(h4_go, showCategory=10) 
+barplot(h4_kegg, showCategory=10) 
+
+```
+```{r}
+gs_c2 <- c2.Ikzf2$gene[!(c2.Ikzf2$gene %in% h2.Ikzf2$gene)]
+gs_h2 <- h2.Ikzf2$gene[!(h2.Ikzf2$gene %in% c2.Ikzf2$gene)]
+gs_b2 <- c2.Ikzf2$gene[h2.Ikzf2$gene %in% c2.Ikzf2$gene]
+
+gs_c4 <- c4.Ikzf2$gene[!(c4.Ikzf2$gene %in% h4.Ikzf2$gene)]
+gs_h4 <- h4.Ikzf2$gene[!(h4.Ikzf2$gene %in% c4.Ikzf2$gene)]
+
+
+c2.ids<-bitr(gs_c2, fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+h2.ids<-bitr(gs_h2, fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+
+
+
+c2_go <- enrichGO(gs_c2, OrgDb = 'org.Mm.eg.db', keyType = "SYMBOL")
+c2_kegg <- enrichKEGG(c2.ids$ENTREZID, organism = 'mmu')
+
+h2_go <- enrichGO(gs_h2, OrgDb = 'org.Mm.eg.db', keyType = "SYMBOL")
+h2_kegg <- enrichKEGG(h2.ids$ENTREZID, organism = 'mmu')
+
+b2_go <- enrichGO(gs_b2, OrgDb = 'org.Mm.eg.db', keyType = "SYMBOL")
+
+
+
+c4.ids<-bitr(gs_c4, fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+h4.ids<-bitr(gs_h4, fromType = "SYMBOL", toType = "ENTREZID", OrgDb="org.Mm.eg.db")
+
+c4_go <- enrichGO(gs_c4, OrgDb = 'org.Mm.eg.db', keyType = "SYMBOL")
+c4_kegg <- enrichKEGG(c4.ids$ENTREZID, organism = 'mmu')
+
+h4_go <- enrichGO(gs_h4, OrgDb = 'org.Mm.eg.db', keyType = "SYMBOL")
+h4_kegg <- enrichKEGG(h4.ids$ENTREZID, organism = 'mmu')
+```
+```{r}
+library(enrichplot)
+#barplot(c2_go, showCategory=10) 
+#barplot(c2_kegg, showCategory=10) 
+#barplot(b2_go, showCategory = 10)
+
+
+#barplot(h2_go, showCategory=10) 
+#barplot(h2_kegg, showCategory=10) 
+
+barplot(c4_go, showCategory=10) 
+#barplot(c4_kegg, showCategory=10) 
+
+barplot(h4_go, showCategory=10) 
+#barplot(h4_kegg, showCategory=10) 
+
+```
+```{r}
+sig <- msigdbr::msigdbr(species = 'Mus musculus', category = 'C5')
+
+bp <- unique(sig$gs_name)
+
+bp[grep("UBIQUITIN", bp)]
+
+ub <- sig[sig$gs_name == "GOMF_UBIQUITIN_LIKE_PROTEIN_TRANSFERASE_ACTIVITY",]$gene_symbol
+
+seu3 <- AddModuleScore(seu3, list(ub), name =  "UBIQUITIN_LIKE_PROTEIN_TRANSFERASE_ACTIVITY")
+
+FeaturePlot(seu3, features = "UBIQUITIN_LIKE_PROTEIN_TRANSFERASE_ACTIVITY1", split.by = 'diet')
+
+VlnPlot(seu3, features = "UBIQUITIN_LIKE_PROTEIN_TRANSFERASE_ACTIVITY1", split.by = 'diet')
+ 
+
+ub <- sig[sig$gs_name == "GOBP_NEGATIVE_REGULATION_OF_UBIQUITIN_PROTEIN_TRANSFERASE_ACTIVITY",]$gene_symbol
+
+seu3 <- AddModuleScore(seu3, list(ub), name =  "UBIQUITIN_PROTEIN_TRANSFERASE_ACTIVITY")
+
+FeaturePlot(seu3, features = "UBIQUITIN_PROTEIN_TRANSFERASE_ACTIVITY1", split.by = 'diet')
+
+VlnPlot(seu3, features = "UBIQUITIN_PROTEIN_TRANSFERASE_ACTIVITY1", split.by = 'diet')
+```
+
+

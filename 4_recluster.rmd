@@ -1,0 +1,681 @@
+---
+title: "R Notebook"
+
+---
+
+```{r}
+library(Seurat)
+library(tidyverse)
+library(ggplot2)
+
+seu <- readRDS('../output/tcr.rds')
+```
+
+```{r}
+seu2 <- subset(seu, subset = group %in% c('Tumour_Ctrl', 'Tumour_HF'))
+
+seu2 <- NormalizeData(seu2)
+seu2 <- FindVariableFeatures(seu2)
+seu2 <- ScaleData(seu2)
+
+seu2 <- RunPCA(seu2)
+seu2 <- RunUMAP(seu2, dims = 1:15)
+```
+
+```{r}
+DimPlot(seu)
+DimPlot(seu2)
+```
+```{r}
+seu2@meta.data$old_clusters <- seu2@meta.data$seurat_clusters
+
+seu2 <- FindNeighbors(seu2)
+seu2 <- FindClusters(seu2, resolution =  0.5)
+
+DimPlot(seu2, label =T)
+DimPlot(seu2, split.by = 'group')
+```
+```{r}
+library(openxlsx)
+tpex_sig <- read.xlsx('~/projects/Axel_Kallies/SC_Tumour_LN/Lei/Axel_signatures/3_Exhausted Precursor (TPEX) Signature_curated.xlsx')
+colnames(tpex_sig) <- tpex_sig[2,]
+tpex_sig <- tpex_sig[-c(1,2),]
+
+#mpec_sig <- read.csv('~/projects/Sammy_Bedoui/ATAC/ilaria/csv/MPEC_top_without_butyrate_signature_DEG.csv')
+#slec_sig <- read.csv('~/projects/Sammy_Bedoui/ATAC/ilaria/csv/SLEC_top_without_butyrate_signature_DEG.csv')
+#mpec_sig <- read.table('~/projects/Sammy_Bedoui/ATAC/ilaria/csv/overexpressed_in_MPEC.txt', header = F)
+#slec_sig <- read.table('~/projects/Sammy_Bedoui/ATAC/ilaria/csv/overexpressed_in_SLEC.txt', header = F)
+
+
+klrg1_sig <- read.table('~/projects/Sammy_Bedoui/ATAC/data/KLRG_1pos_signature.txt', header = T)
+
+mpec <- read.xlsx('~/projects/Sammy_Bedoui/ATAC/ilaria/csv/MPECvsSCLEC_pseudobulk_DE.xlsx', sheet = 2)
+slec <- read.xlsx('~/projects/Sammy_Bedoui/ATAC/ilaria/csv/MPECvsSCLEC_pseudobulk_DE.xlsx', sheet = 3)
+butyrate <- read.xlsx('~/projects/Sammy_Bedoui/ATAC/ilaria/csv/MPECvsSCLEC_pseudobulk_DE.xlsx', sheet = 4)
+
+mpec_sig_pos <- mpec[mpec$logFC > 0.54 & mpec$adj.P.Val < 0.05, 'genes']
+mpec_sig_neg <- mpec[mpec$logFC < -0.54 & mpec$adj.P.Val < 0.05, 'genes']
+
+slec_sig_pos <- slec[slec$logFC > 0.54 & slec$adj.P.Val < 0.05, 'genes']
+slec_sig_neg <- slec[slec$logFC < -0.54 & slec$adj.P.Val < 0.05, 'genes']
+
+butyrate_sig_pos <- butyrate[butyrate$logFC > 0.54 & butyrate$adj.P.Val < 0.05, 'genes']
+butyrate_sig_neg <- butyrate[butyrate$logFC < -0.54 & butyrate$adj.P.Val < 0.05, 'genes']
+
+
+
+seu2 <- AddModuleScore(seu2,list(tpex_sig$Symbol), name = 'TPEX_Score')
+seu2 <- AddModuleScore(seu2,list(klrg1_sig$Name), name = 'KLRG1_sig_Score')
+seu2 <- AddModuleScore(seu2,list(mpec_sig_pos), name = 'MPEC_Score')
+seu2 <- AddModuleScore(seu2,list(slec_sig_pos), name = 'SLEC_Score')
+seu2 <- AddModuleScore(seu2,list(butyrate_sig_pos), name = 'butyrate_Score')
+
+
+FeaturePlot(seu2, features = 'TPEX_Score1', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'KLRG1_sig_Score1', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'MPEC_Score1', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'SLEC_Score1', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'butyrate_Score1', max.cutoff = 'q95', min.cutoff = 'q5')
+
+
+
+
+DimPlot(seu2, group.by = 'annot_merged')
+```
+
+```{r}
+m <- FindMarkers(seu2, ident.1 = 'Tumour_Ctrl', ident.2 = 'Tumour_HF', group.by = 'group')
+head(m, 50)
+
+sum(m$p_val_adj < 0.05 & m$avg_log2FC>0)
+sum(m$p_val_adj < 0.05 & m$avg_log2FC<0)
+
+```
+
+
+```{r}
+#all_markers <- FindAllMarkers(seu2)
+
+#seu@meta.data$group2 <- paste(seu@meta.data$group, seu@meta.data$annot_merged)
+
+c0 <- colnames(subset(seu2, subset = seurat_clusters == 0))
+
+m0 <- FindMarkers(seu2, ident.1 = 0)
+m0.fc <- m0$avg_log2FC
+names(m0.fc) <- rownames(m0)
+limma::barcodeplot(m0.fc, index = tpex_sig$Symbol, main = 'Cluster 0 TPEX')
+limma::barcodeplot(m0.fc, index = klrg1_sig$Name, main = 'Cluster 0 MPEC vs SLEC')
+
+mp0 <- mpec[mpec$genes %in% names(m0.fc),]
+m.fc <- m0.fc[names(m0.fc) %in% mp0$genes]
+limma::barcodeplot(m.fc, index = mp0$genes, gene.weights = mp0$logFC,  main = 'Cluster 0 MPEC')
+
+sp0 <- slec[slec$genes %in% names(m0.fc),]
+m.fc <- m0.fc[names(m0.fc) %in% sp0$genes]
+limma::barcodeplot(m.fc, index = sp0$genes, gene.weights = sp0$logFC,  main = 'Cluster 0 SLEC')
+
+#limma::barcodeplot(m0, index = mpec_sig$genes)
+#limma::barcodeplot(m0, index = slec_sig$genes)
+
+
+m1 <- FindMarkers(seu2, ident.1 = 1)
+m1.fc <- m1$avg_log2FC
+names(m1.fc) <- rownames(m1)
+limma::barcodeplot(m1.fc, index = tpex_sig$Symbol, main = 'Cluster 1 TPEX')
+limma::barcodeplot(m1.fc, index = klrg1_sig$Name, main = 'Cluster 1 MPEC vs SLEC')
+
+
+mp1 <- mpec[mpec$genes %in% names(m1.fc),]
+m1.fc <- m1.fc[names(m1.fc) %in% mp1$genes]
+limma::barcodeplot(m1.fc, index = mp1$genes, gene.weights = mp1$logFC,  main = 'Cluster 1 MPEC')
+#limma::barcodeplot(m1, index = mpec_sig$genes)
+#limma::barcodeplot(m1, index = slec_sig$genes)
+
+
+m2 <- FindMarkers(seu2, ident.1 = 2)
+m2.fc <- m2$avg_log2FC
+names(m2.fc) <- rownames(m2)
+limma::barcodeplot(m2.fc, index = tpex_sig$Symbol[tpex_sig$Symbol %in% names(m2.fc)], main = "Cluster 2 TPEX")
+limma::barcodeplot(m2.fc, index = klrg1_sig$Name, main = 'Cluster 2 MPEC vs SLEC')
+
+
+mp2 <- mpec[mpec$genes %in% names(m2.fc),]
+m.fc <- m2.fc[names(m2.fc) %in% mp2$genes]
+limma::barcodeplot(m.fc, index = mp2$genes, gene.weights = mp2$logFC,  main = 'Cluster 2 MPEC')
+
+sp2 <- slec[slec$genes %in% names(m2.fc),]
+m.fc <- m2.fc[names(m2.fc) %in% sp2$genes]
+limma::barcodeplot(m.fc, index = sp2$genes, gene.weights = sp2$logFC,  main = 'Cluster 0 SLEC')
+#limma::barcodeplot(m2, index = mpec_sig$genes)
+#limma::barcodeplot(m2, index = slec_sig$genes)
+
+mp2 <- mpec[mpec$genes %in% names(m2.fc),]
+m.fc <- m2.fc[names(m2.fc) %in% mp2$genes]
+limma::barcodeplot(m.fc, index = mp2$genes, gene.weights = mp2$logFC,  main = 'Cluster 2 MPEC')
+
+
+m3 <- FindMarkers(seu2, ident.1 = 3)
+m3.fc <- m3$avg_log2FC
+names(m3.fc) <- rownames(m3)
+limma::barcodeplot(m3.fc, index = tpex_sig$Symbol[tpex_sig$Symbol %in% names(m3)], main = 'Cluster 3 TPEX')
+limma::barcodeplot(m3.fc, index = klrg1_sig$Name, main = 'Cluster 3 KLRG1 Sig')
+
+#limma::barcodeplot(m3, index = mpec_sig$genes)
+#limma::barcodeplot(m3, index = slec_sig$genes)
+
+
+#m4 <- all_markers[all_markers$cluster == 4,]$avg_log2FC
+#names(m4) <- all_markers[all_markers$cluster == 4,]$gene
+m4 <- FindMarkers(seu2, ident.1 = 4)
+m4.fc <- m4$avg_log2FC
+names(m4.fc) <- rownames(m4)
+limma::barcodeplot(m4.fc, index = tpex_sig$Symbol[tpex_sig$Symbol %in% names(m4.fc)], main = 'Cluster 4 TPEX')
+limma::barcodeplot(m4.fc, index = klrg1_sig$Name[klrg1_sig$Name %in% names(m4.fc)], main = 'Cluster 4 MPEC vs SLEC')
+
+#limma::barcodeplot(m4, index = mpec_sig$genes)
+#limma::barcodeplot(m4, index = slec_sig$genes)
+
+
+m5 <- FindMarkers(seu2, ident.1 = 5)
+m5.fc <- m5$avg_log2FC
+names(m5.fc) <- rownames(m5)
+limma::barcodeplot(m5.fc, index = tpex_sig$Symbol, main = 'Cluster 5 TPEX')
+limma::barcodeplot(m5.fc, index = klrg1_sig$Name, main = 'Cluster 5 MPEC vs SLEC')
+
+mp5 <- mpec[mpec$genes %in% names(m5.fc),]
+m.fc <- m5.fc[names(m5.fc) %in% mp5$genes]
+limma::barcodeplot(m.fc, index = mp5$genes, gene.weights = mp5$logFC,  main = 'Cluster 5 MPEC')
+
+#limma::barcodeplot(m5, index = mpec_sig$genes)
+#limma::barcodeplot(m5, index = slec_sig$genes)
+
+m6 <- FindMarkers(seu2, ident.1 = 6)
+m6.fc <- m6$avg_log2FC
+names(m6.fc) <- rownames(m6)
+limma::barcodeplot(m6.fc, index = tpex_sig$Symbol, main = 'Cluster 6 TPEX')
+limma::barcodeplot(m6.fc, index = klrg1_sig$Name, main = 'Cluster 6 KLRG1 Sig')
+
+mp6 <- mpec[mpec$genes %in% names(m6.fc),]
+m.fc <- m6.fc[names(m6.fc) %in% mp6$genes]
+limma::barcodeplot(m.fc, index = mp6$genes, gene.weights = mp6$logFC,  main = 'Cluster 6 MPEC')
+
+sp0 <- slec[slec$genes %in% names(m0.fc),]
+m.fc <- m0.fc[names(m0.fc) %in% sp0$genes]
+limma::barcodeplot(m.fc, index = sp0$genes, gene.weights = sp0$logFC,  main = 'Cluster 0 SLEC')
+```
+
+
+Pdcd1, Il7r, Tcf7, Tox, Ly6c, Cd25, Cd69, Cd103, Cd24, Cd45.1, CD44, Cd62L, Klrg1, Tim3, Cd101, CX3CR1
+```{r}
+FeaturePlot(seu2, features = 'Pdcd1', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Il7r', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Tcf7', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Tox', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Ly6c1', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Il2ra', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Cd69', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Itgae', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Cd24a', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Ptprc', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Cd44', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Sell', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Klrg1', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Havcr2', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Cd101', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Cx3cr1', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Prf1', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Ifng', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+FeaturePlot(seu2, features = 'Xist', split.by = 'group', max.cutoff = 'q95', min.cutoff = 'q5')
+
+```
+```{r}
+library(openxlsx)
+
+wb = createWorkbook()
+addWorksheet(wb, 'all')
+m <- FindMarkers(seu2, ident.1 = 'Tumour_HF', group.by = 'group')
+m$gene <- rownames(m)
+writeData(wb, 'all', x = m)
+for(i in levels(seu2$seurat_clusters)) {
+   m <- FindMarkers(seu2, subset.ident = i, group.by = 'group', ident.1 = 'Tumour_HF')
+   m$gene <- rownames(m)
+  s <- paste('cluster', i)
+  addWorksheet(wb, s)
+  writeData(wb, s, x = m)
+}
+
+
+saveWorkbook(wb, '../output/Tumour_clusters_HFvsCtrl_degs.xlsx', overwrite = T)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+m <- FindMarkers(seu2, ident.1 = '5', group.by = 'old_clusters')
+
+m.fc <- m$avg_log2FC
+names(m.fc) <- rownames(m)
+sp <- slec[slec$genes %in% names(m.fc),]
+m.fc <- m.fc[names(m.fc) %in% sp$genes]
+limma::barcodeplot(m.fc, index = sp$genes, gene.weights = sp$logFC,  main = 'Old Cluster 5 SLEC')
+```
+```{r}
+seu2@meta.data$cluster_including_mock <- seu2@meta.data$old_clusters
+
+seu2@meta.data$clusters_res0.5 <- seu2@meta.data$seurat_clusters
+
+seu2 <- FindClusters(seu2, resolution =  0.7)
+
+DimPlot(seu2)
+
+seu2@meta.data$clusters_res0.7 <- seu2@meta.data$seurat_clusters
+
+seu2 <- FindClusters(seu2, resolution =  0.4)
+
+DimPlot(seu2)
+
+seu2@meta.data$clusters_res0.4 <- seu2@meta.data$seurat_clusters
+
+seu2 <- FindClusters(seu2, resolution =  0.3)
+
+seu2@meta.data$clusters_res0.3 <- seu2@meta.data$seurat_clusters
+
+
+DimPlot(seu2)
+```
+
+
+```{r}
+library(slingshot)
+sce = as.SingleCellExperiment(seu2)
+
+sce2 <- slingshot(sce, clusterLabels = 'clusters_res0.5',  reducedDim = 'UMAP', start.clus = NULL)
+
+summary(sce2$slingPseudotime_1)
+```
+
+```{r}
+library(grDevices)
+library(RColorBrewer)
+
+colors <- colorRampPalette(brewer.pal(11,'Spectral')[-6])(100)
+
+plotcol <- colors[cut(sce2$slingPseudotime_1, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce2$slingPseudotime_2, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce2$slingPseudotime_3, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+```
+
+```{r}
+sce = as.SingleCellExperiment(seu2)
+
+DimPlot(seu2, group.by = 'clusters_res0.5')
+sce2 <- slingshot(sce, clusterLabels = 'clusters_res0.5',  reducedDim = 'UMAP', start.clus = 3)
+
+sce2$pseudotime <- rowMeans(cbind(sce2$slingPseudotime_1, sce2$slingPseudotime_2, sce2$slingPseudotime_3, sce2$slingPseudotime_4), na.rm = T)
+
+summary(sce2$slingPseudotime_1)
+
+plotcol <- colors[cut(sce2$slingPseudotime_1, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce2$slingPseudotime_2, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce2$slingPseudotime_3, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+#plotcol <- colors[cut(sce2$slingPseudotime_4, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+#plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+#lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+```
+
+```{r}
+sce = as.SingleCellExperiment(seu2)
+
+sce2 <- slingshot(sce, clusterLabels = 'clusters_res0.5',  reducedDim = 'UMAP', start.clus = 7)
+
+sce2$pseudotime <- rowMeans(cbind(sce2$slingPseudotime_1, sce2$slingPseudotime_2, sce2$slingPseudotime_3, sce2$slingPseudotime_4), na.rm = T)
+
+summary(sce2$slingPseudotime_1)
+
+plotcol <- colors[cut(sce2$slingPseudotime_1, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce2$slingPseudotime_2, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce2$slingPseudotime_3, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+#plotcol <- colors[cut(sce2$slingPseudotime_4, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+#plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+#lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+```
+
+
+```{r}
+sce = as.SingleCellExperiment(seu2)
+
+sce2 <- slingshot(sce, clusterLabels = 'clusters_res0.5',  reducedDim = 'UMAP', start.clus = 3)
+
+sce2$pseudotime <- rowMeans(cbind(sce2$slingPseudotime_1, sce2$slingPseudotime_2, sce2$slingPseudotime_3, sce2$slingPseudotime_4), na.rm = T)
+
+summary(sce2$slingPseudotime_1)
+
+plotcol <- colors[cut(sce2$slingPseudotime_1, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce2$slingPseudotime_2, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce2$slingPseudotime_3, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+#plotcol <- colors[cut(sce2$slingPseudotime_4, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+#plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+#lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce2)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce2), lwd=2, col='black')
+
+seu2 <- AddMetaData(seu2, sce2$pseudotime, col.name = 'pseudotime')
+```
+```{r}
+sce3 = as.SingleCellExperiment(seu)
+
+sce4 <- slingshot(sce3, clusterLabels = 'seurat_clusters',  reducedDim = 'UMAP', start.clus = 7)
+
+summary(sce4$slingPseudotime_1)
+```
+```{r}
+plotcol <- colors[cut(sce4$slingPseudotime_1, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+plot(reducedDims(sce4)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce4), lwd=2, col='black')
+
+
+plotcol <- colors[cut(sce4$slingPseudotime_2, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+
+
+plot(reducedDims(sce4)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce4), lwd=2, col='black')
+
+sce4$pseudotime <- rowMeans(cbind(sce4$slingPseudotime_1, sce4$slingPseudotime_2, sce4$slingPseudotime_3), na.rm = T)
+
+plotcol <- colors[cut(sce4$pseudotime, breaks=100)]
+#plotcol <- colors[cut(sce2$pseudotime, breaks=100)]
+
+plot(reducedDims(sce4)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(sce4), lwd=2, col='black')
+```
+
+
+```{r}
+gbt_i <- seu2@meta.data$gBT_I
+seu2@meta.data$gBT_I <- 0
+seu2@meta.data$gBT_I[gbt_i] <- 1
+
+DimPlot(seu2, group.by = 'gBT_I')
+```
+
+```{r}
+but_MPEC <- read.xlsx('~/projects/Sammy_Bedoui/ATAC/ilaria/csv/List_of_genes_that_overlap_ButSign_pseudobulk_MPEC_only_JASM_Wong_ICB.xlsx')
+but_MPEC_pos <- but_MPEC[but_MPEC$logFC > 0.54,'genes']
+
+seu2 <- AddModuleScore(seu2, features = list(but_MPEC_pos), name = 'butyrate_MPEC')
+
+FeaturePlot(seu2, features = 'butyrate_MPEC1', min.cutoff = 'q5', max.cutoff = 'q95')
+```
+```{r}
+filtered_gex <- readRDS('~/projects/Sammy_Bedoui/ATAC/ilaria/RData/filtered_gex.rds')
+
+DimPlot(filtered_gex, group.by = 'SLEC_MPEC_other')
+DimPlot(filtered_gex, group.by = 'treatment')
+
+
+filtered_gex <- SetIdent(filtered_gex, value = 'SLEC_MPEC_other')
+markers_MPEC_but <- FindMarkers(filtered_gex, subset.ident = 'MPEC', group.by = 'treatment', ident.1 = 'But')
+
+mpec_but_pos <- markers_MPEC_but[markers_MPEC_but$avg_log2FC > 2 & markers_MPEC_but$p_val_adj < 0.05,]
+mpec_but_neg <- markers_MPEC_but[markers_MPEC_but$avg_log2FC < 2 & markers_MPEC_but$p_val_adj < 0.05,]
+
+filtered_gex <- AddModuleScore(filtered_gex, features = list(rownames(mpec_but_pos)), name = 'MPEC_Butyrate_Score')
+filtered_gex <- AddModuleScore(filtered_gex, features = list(rownames(mpec_but_neg)), name = 'MPEC_Butyrate_negative_Score')
+
+filtered_gex@meta.data$group <- paste(filtered_gex@meta.data$treatment, filtered_gex$SLEC_MPEC_other, sep = '_')
+
+DimPlot(filtered_gex, group.by = 'group')
+
+m2 <- FindMarkers(filtered_gex, ident.1 = 'But_MPEC', group.by = 'group')
+m3 <- FindMarkers(filtered_gex, ident.1 = 'But_MPEC', ident.2 = c('Ctrl__other', 'Ctrl_MPEC', 'Ctrl_SLEC'), group.by = 'group')
+
+
+m2_up <- m2[m2$p_val_adj < 0.01 & m2$avg_log2FC > 1,]
+m3_up <- m3[m3$p_val_adj < 0.01 & m3$avg_log2FC > 1,]
+
+m2_down <- m2[m2$p_val_adj < 0.01 & m2$avg_log2FC < 1,]
+m3_down <- m3[m3$p_val_adj < 0.01 & m3$avg_log2FC < 1,]
+
+filtered_gex <- AddModuleScore(filtered_gex, list(rownames(m2_up)), name = 'But_MPEC_vs_All')
+filtered_gex <- AddModuleScore(filtered_gex, list(rownames(m3_up)), name = 'But_MPEC_vs_Ctrl')
+
+filtered_gex <- AddModuleScore(filtered_gex, list(rownames(m2_down)), name = 'But_MPEC_vs_All_down')
+filtered_gex <- AddModuleScore(filtered_gex, list(rownames(m3_down)), name = 'But_MPEC_vs_Ctrl_down')
+
+FeaturePlot(filtered_gex, features = 'MPEC_Butyrate_Score1')
+FeaturePlot(filtered_gex, features = 'MPEC_Butyrate_negative_Score1')
+
+FeaturePlot(filtered_gex, features = 'But_MPEC_vs_All1')
+FeaturePlot(filtered_gex, features = 'But_MPEC_vs_Ctrl1')
+
+FeaturePlot(filtered_gex, features = 'But_MPEC_vs_All_down1')
+FeaturePlot(filtered_gex, features = 'But_MPEC_vs_Ctrl_down1')
+```
+```{r}
+seu2 <- AddModuleScore(seu2, features = list(rownames(mpec_but_pos)), name = 'MPEC_Butyrate_Score')
+seu2 <- AddModuleScore(seu2, features = list(rownames(mpec_but_neg)), name = 'MPEC_Butyrate_Neg_Score')
+
+seu2 <- AddModuleScore(seu2, list(rownames(m2_up)), name = 'But_MPEC_vs_All')
+seu2 <- AddModuleScore(seu2, list(rownames(m3_up)), name = 'But_MPEC_vs_Ctrl')
+
+seu2 <- AddModuleScore(seu2, list(rownames(m2_down)), name = 'But_MPEC_vs_All_down')
+seu2 <- AddModuleScore(seu2, list(rownames(m3_down)), name = 'But_MPEC_vs_Ctrl_down')
+
+FeaturePlot(seu2, features = 'MPEC_Butyrate_Score1', min.cutoff = 'q5', max.cutoff = 'q95')
+FeaturePlot(seu2, features = 'MPEC_Butyrate_Neg_Score1', min.cutoff = 'q5', max.cutoff = 'q95')
+FeaturePlot(seu2, features = 'But_MPEC_vs_All1', min.cutoff = 'q5', max.cutoff = 'q95')
+FeaturePlot(seu2, features = 'But_MPEC_vs_Ctrl1', min.cutoff = 'q5', max.cutoff = 'q95')
+FeaturePlot(seu2, features = 'But_MPEC_vs_All_down1', min.cutoff = 'q5', max.cutoff = 'q95')
+FeaturePlot(seu2, features = 'But_MPEC_vs_Ctrl_down1', min.cutoff = 'q5', max.cutoff = 'q95')
+```
+
+```{r}
+seu_filtered_4 <- seu2[,!grepl("TRA", seu2$CTgene) & !grepl("TRB", seu2$CTgene) ]
+
+
+hl <- colnames(seu_filtered_4)
+
+DimPlot(seu2, cells.highlight = hl)
+
+hl2 <- colnames(seu2[,!grepl("TRB", seu2$CTgene)])
+
+DimPlot(seu2, cells.highlight = hl2)
+
+length(hl)
+
+cl7 <- subset(seu2, subset = clusters_res0.5 == 7) 
+ncol(cl7)
+mcl7 <- cl7[,!grepl("TRA", cl7$CTgene) & !grepl("TRB", cl7$CTgene) ]
+ncol(mcl7)
+
+ncol(mcl7)/ncol(cl7)
+```
+```{r}
+seu2 <- SetIdent(seu2, value = 'clusters_res0.5')
+
+cluster_markers <- FindAllMarkers(seu2)
+
+wb = createWorkbook()
+for(i in levels(seu2$clusters_res0.5)) {
+  s <- paste('cluster', i)
+  addWorksheet(wb, s)
+  writeData(wb, s, x = cluster_markers[cluster_markers$cluster == i,])
+}
+
+
+saveWorkbook(wb, '../output/Tumour_cluster_markers.xlsx', overwrite = T)
+```
+
+
+```{r}
+FeaturePlot(seu2, features = 'percent_ribo', max.cutoff = 'q95')
+FeaturePlot(seu2, features = 'nCount_RNA', max.cutoff = 'q95')
+FeaturePlot(seu2, features = 'nFeature_RNA', max.cutoff = 'q95')
+FeaturePlot(seu2, features = 'Trgv2', max.cutoff = 'q95')
+```
+
+```{r}
+FeatureScatter(seu2, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", split.by = 'clusters_res0.5')
+FeatureScatter(seu2, feature1 = "nCount_RNA", feature2 = "percent_ribo", split.by = 'clusters_res0.5')
+```
+
+
+```{r}
+saveRDS(seu2, '../output/reclustered.rds')
+```
+
+```{r}
+#library(ShinyCell)
+
+#scConf = createConfig(seu)
+#makeShinyApp(seu, scConf, gene.mapping = TRUE,
+#             shiny.title = "Melenoma/Mock LN CD8+") 
+
+#scConf = createConfig(seu2)
+#makeShinyApp(seu2, scConf, gene.mapping = TRUE,
+#            shiny.title = "Melenoma LN CD8+") 
+```
+

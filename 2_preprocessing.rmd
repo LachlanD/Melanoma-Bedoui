@@ -1,0 +1,164 @@
+---
+title: "Preprocessing"
+author: "Lachlan Dryburgh"
+output: html_document
+---
+```{r}
+library(Seurat)
+library(tidyverse)
+library(ggplot2)
+library(viridis)
+```
+
+```{r}
+seu <- readRDS('../output/qc.rds')
+
+seu <- NormalizeData(seu)
+seu <- FindVariableFeatures(seu)
+seu <- ScaleData(seu)
+
+seu <- RunPCA(seu)
+seu <- RunUMAP(seu, dims = 1:15)
+```
+
+
+
+```{r}
+#library(Azimuth)
+
+#az <- RunAzimuth(seu, reference = "pbmcref")
+
+#p1 <- DimPlot(az, group.by = "predicted.celltype.l2", label = TRUE, label.size = 3, reduction = 'ref.umap') + NoLegend()
+#p2 <- DimPlot(az, group.by ='seurat_clusters',  reduction = 'ref.umap')
+#p1 + p2
+```
+
+
+```{r}
+DimPlot(seu, group.by = 'HTO_2_classification')
+
+seu <- FindNeighbors(seu)
+seu <- FindClusters(seu, resolution =  0.4)
+
+DimPlot(seu, split.by = 'group') + scale_color_viridis(discrete=TRUE, option="turbo")
+```
+```{r}
+table(seu$HTO_2_classification)
+
+table(seu$seurat_clusters, seu$HTO_2_classification)
+
+prop.table(table(seu$seurat_clusters, seu$HTO_2_classification), margin = 2)
+```
+
+```{r}
+markers <- FindAllMarkers(seu)
+```
+
+```{r}
+markers2 <- markers[markers$p_val_adj < 0.05, ]
+markers2 <- markers2[order(markers2$avg_log2FC, decreasing = T),]
+
+markers[markers$cluster == 0,]
+markers[markers$cluster == 1,]
+markers[markers$cluster == 2,]
+markers[markers$cluster == 3,]
+markers[markers$cluster == 4,]
+markers[markers$cluster == 5,]
+markers[markers$cluster == 6,]
+markers[markers$cluster == 7,]
+
+naive <- FindMarkers(seu, ident.1 = 0)
+naive <- naive[naive$p_val_adj < 0.05 & naive$avg_log2FC > 0.5,]
+
+write.csv(naive, 'naive_sig.csv')
+```
+```{r}
+FeaturePlot(seu, features = c('Cxcr3', 'Igfbp4', 'Ctla4', 'Ifit3'))
+FeaturePlot(seu, features = c('Ccl5', 'S100a6', 'Nr4a1', 'Siglech'))
+
+FeaturePlot(seu, features ='Prf1')
+
+
+
+
+```
+
+```{r}
+library(openxlsx)
+
+wb = createWorkbook()
+for(i in levels(seu$seurat_clusters)) {
+  
+  addWorksheet(wb, i)
+  writeData(wb, i, x = markers[markers$cluster == i,])
+}
+
+
+saveWorkbook(wb, 'markers.xlsx', overwrite = T)
+```
+
+```{r}
+FeaturePlot(seu, features = 'nCount_HTO', max.cutoff = 'q95', split.by = 'HTO_2_classification')
+
+
+```
+
+
+```{r}
+library(SingleR)
+library(celldex)
+
+sce <- as.SingleCellExperiment(seu)
+
+ref <- ImmGenData()
+annot <- SingleR(test = sce, ref = ref, labels = ref$label.fine)
+
+sce$annot <- annot$labels
+seu$annot <- annot$labels
+
+
+table(sce$seurat_clusters, sce$annot)
+which.max(table(sce$seurat_clusters, sce$annot)['7',])
+```
+```{r}
+annot$merged_labels <- annot$labels
+
+annot$merged_labels[grepl("Tgd", annot$merged_labels, fixed = T) ] <- "Other"
+annot$merged_labels[grepl("T.4N", annot$merged_labels, fixed = T) ] <- "Other"
+annot$merged_labels[grepl("T.8N", annot$merged_labels, fixed = T) ] <- "CD8 Naive"
+annot$merged_labels[grepl("T.4EF", annot$merged_labels, fixed = T) ] <- "Other"
+annot$merged_labels[grepl("T.4M", annot$merged_labels, fixed = T) ] <- "CD8 Mem"
+annot$merged_labels[grepl("T.8EFF", annot$merged_labels, fixed = T) ] <- "CD8 Eff"
+annot$merged_labels[grepl("T.8M", annot$merged_labels, fixed = T) ] <- "CD8 Mem"
+annot$merged_labels[grepl("T.Tregs", annot$merged_labels, fixed = T) ] <- "Other"
+annot$merged_labels[grepl("DC", annot$merged_labels, fixed = T) ] <- "Other"
+annot$merged_labels[grepl("B" , annot$merged_labels, fixed = T) ] <- "Other"
+annot$merged_labels[grepl("MF", annot$merged_labels, fixed = T) ] <- "Other"
+annot$merged_labels[grepl("MO.", annot$merged_labels, fixed = T) ] <- "Other"
+annot$merged_labels[grepl("T.CD8", annot$merged_labels, fixed = T) ] <- "CD8 other"
+annot$merged_labels[grepl("T.8SP", annot$merged_labels, fixed = T) ] <- "CD8 other"
+annot$merged_labels[grepl("T.CD4", annot$merged_labels, fixed = T) ] <- "Other"
+annot$merged_labels[grepl("T.4", annot$merged_labels, fixed = T) ] <- "Other"
+annot$merged_labels[grepl("ILC", annot$merged_labels, fixed = T) ] <- "Other"
+annot$merged_labels[grepl("NK", annot$merged_labels, fixed = T) ] <- "Other"
+annot$merged_labels[grepl("Stem", annot$merged_labels, fixed = T) ] <- "Other"
+
+
+table(annot$merged_labels)
+
+seu$annot_merged <- annot$merged_labels
+
+table(seu@meta.data$annot_merged, seu@meta.data$group)
+
+
+
+DimPlot(seu, group.by = 'annot_merged') + scale_color_viridis(discrete=TRUE, option="turbo")
+
+DimPlot(seu, group.by = 'annot_merged', split.by = 'group') + scale_color_viridis(discrete=TRUE, option="turbo")
+
+```
+
+```{r}
+saveRDS(seu, '../output/preprocessed.rds')
+```
+

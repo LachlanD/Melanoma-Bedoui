@@ -1,0 +1,215 @@
+---
+title: "TCR"
+author: "Lachlan Dryburgh"
+date: "2024-02-16"
+output: html_document
+---
+
+```{r}
+library(Seurat)
+library(tidyverse)
+library(ggplot2)
+library(scRepertoire)
+```
+
+
+```{r}
+tcr <- read.csv("~/scratch/lachlan/melenoma_bedoui/data/cellranger_out/outs/per_sample_outs/cellranger_out/vdj_t/filtered_contig_annotations.csv")
+
+seu <- readRDS('../output/preprocessed.rds')
+```
+
+```{r}
+contig_list <- createHTOContigList(tcr, seu, group.by = 'group')
+#contig_list <- createHTOContigList(tcr, seu, group.by = NULL)
+
+
+combined <- combineTCR(contig_list, samples = c('Mock_Ctrl', 'Mock_HF', 'Tumour_Ctrl', 'Tumour_HF'), filterMulti = TRUE)
+#combined <- combineTCR(contig_list,  filterMulti = TRUE)
+
+quantContig(combined, cloneCall="aa", scale = T, chain ='both')
+lengthContig(combined, cloneCall="aa", chain = "both") 
+
+clonalHomeostasis(combined, cloneCall = "gene", 
+                  cloneTypes = c(Rare = 1e-04, 
+                                 Small = 0.001, 
+                                 Medium = 0.01, 
+                                 Large = 0.1, 
+                                 Hyperexpanded = 1))
+
+
+```
+```{r}
+for (i in seq_along(combined)) {
+    combined[[i]] <- stripBarcode(combined[[i]], column = 1, connector = "_", num_connects = 3)
+}
+
+seu <- combineExpression(combined, seu, 
+                  cloneCall="strict", 
+                  group.by = "sample",  
+                  proportion = FALSE, 
+                  cloneTypes = c(Single=1, Small=5, Medium=20, Large=100, Hyperexpanded=500))
+
+seu <- combineExpression(combined, seu, 
+                  cloneCall="strict", 
+                  group.by = "none",  
+                  proportion = FALSE, 
+                  cloneTypes = c(Single=1, Small=5, Medium=20, Large=100, Hyperexpanded=500))
+
+table(seu$group, seu$cloneType)
+plot(table(seu$group, seu$cloneType))
+
+mems <- subset(seu, subset = annot_merged == 'CD8 Mem')
+table(mems$group, mems$cloneType)
+plot(table(mems$group, mems$cloneType))
+
+
+
+nv <- subset(seu, subset = annot_merged == 'CD8 Naive')
+table(nv$group, nv$cloneType)
+plot(table(nv$group, nv$cloneType))
+```
+```{r}
+DimPlot(seu, split.by = 'cloneType', group.by = 'group') 
+```
+```{r}
+multi <- subset(seu, subset = Frequency > 1)
+
+DimPlot(multi, group.by = 'Frequency')
+
+CTgene <- multi@meta.data$CTgene
+s <- unlist(str_split(CTgene, '\\.'))
+s <- gsub('.*_', '', s)
+
+table(factor(s))
+
+table(multi$Frequency, multi$group)
+
+seu@meta.data$TRBC2 <- grepl('TRBC2', seu$CTgene)
+
+
+DimPlot(seu, group.by = 'TRBC2')
+```
+```{r}
+sub <- subset(seu, subset = Frequency == 3)
+
+sub$CTstrict
+
+
+DimPlot(seu, group.by = 'Frequency') + scale_color_manual(values = c('azure2', 'red', 'blue',  'yellow', 'green', 'orange', 'purple'), breaks = c('1', '2','3','4','5','6','7'), )
+```
+```{r}
+seu@meta.data$gBT_I <- grepl("TRAV14D-1.TRAJ21.TRAC_TGTGCAGCAGTGTCTAATTACAACGTGCTTTACTTC_TRBV26.TRBD1.TRBJ1-2.TRBC1_TGTGCCAGCAGAGGACAGGGGGTCTCCGACTACACCTTC", seu$CTstrict)
+
+DimPlot(seu, group.by = 'gBT_I', split.by = 'group') + scale_color_manual(values = c('red', 'azure2'), breaks = c('TRUE', 'FALSE'))
+
+DimPlot(seu, cells.highlight = colnames(seu[,seu$gBT_I]), split.by = 'group') 
+```
+
+```{r}
+u <- unique(combined$Mock_HF$CTstrict)
+u[u %in% unique(combined$Tumour_Ctrl$CTstrict)]
+
+seu[,grepl("TRAV13-1.TRAJ22.TRAC_TGTGCTTTGGAAGCATCTTCTGGCAGCTGGCAACTCATCTTT_NA_NA", seu$CTstrict)]@meta.data
+
+ DimPlot(seu, cells.highlight = colnames(seu)[grepl("TRAV13-1.TRAJ22.TRAC_TGTGCTTTGGAAGCATCTTCTGGCAGCTGGCAACTCATCTTT_NA_NA", seu$CTstrict)], split.by = 'group')
+ 
+ 
+```
+
+
+```{r}
+mc <- combined$Mock_Ctrl[combined$Mock_Ctrl$CTstrict != 'TRAV14D-1.TRAJ21.TRAC_TGTGCAGCAGTGTCTAATTACAACGTGCTTTACTTC_TRBV26.TRBD1.TRBJ1-2.TRBC1_TGTGCCAGCAGAGGACAGGGGGTCTCCGACTACACCTTC',]
+mhf <- combined$Mock_HF[combined$Mock_HF$CTstrict != 'TRAV14D-1.TRAJ21.TRAC_TGTGCAGCAGTGTCTAATTACAACGTGCTTTACTTC_TRBV26.TRBD1.TRBJ1-2.TRBC1_TGTGCCAGCAGAGGACAGGGGGTCTCCGACTACACCTTC',]
+tc <- combined$Tumour_Ctrl[combined$Tumour_Ctrl$CTstrict != 'TRAV14D-1.TRAJ21.TRAC_TGTGCAGCAGTGTCTAATTACAACGTGCTTTACTTC_TRBV26.TRBD1.TRBJ1-2.TRBC1_TGTGCCAGCAGAGGACAGGGGGTCTCCGACTACACCTTC',]
+thf <- combined$Tumour_HF[combined$Tumour_HF$CTstrict != 'TRAV14D-1.TRAJ21.TRAC_TGTGCAGCAGTGTCTAATTACAACGTGCTTTACTTC_TRBV26.TRBD1.TRBJ1-2.TRBC1_TGTGCCAGCAGAGGACAGGGGGTCTCCGACTACACCTTC',]
+
+#combined_filterd <- list(Mock_Ctrl = mc, Mock_HF = mhf, Tumour_Ctrl = tc, Tumour_HF = thf) 
+combined_filterd <- list(Tumour_Ctrl = tc, Tumour_HF = thf) 
+
+vizGenes(combined_filterd, gene = "V", 
+         chain = "TRA", 
+         plot = "bar", 
+         scale = TRUE)
+
+vizGenes(combined_filterd, gene = "V", 
+         chain = "TRB", 
+         plot = "bar", 
+         scale = TRUE)
+
+vizGenes(combined_filterd, gene = "J", 
+         chain = "TRA", 
+         plot = "bar", 
+         scale = TRUE)
+
+vizGenes(combined_filterd, gene = "J", 
+         chain = "TRB", 
+         plot = "bar", 
+         scale = TRUE)
+
+vizGenes(combined_filterd, 
+         gene = "V", 
+         chain = "TRA", 
+         y.axis = "J", 
+         plot = "heatmap", 
+         scale = TRUE, 
+         order = "variance")
+
+vizGenes(combined_filterd, 
+         gene = "V", 
+         chain = "TRB", 
+         y.axis = "J", 
+         plot = "heatmap", 
+         scale = TRUE, 
+         order = "variance")
+```
+```{r}
+clonalOverlap(combined_filterd, 
+              cloneCall = "genes", 
+              method = "morisita")
+
+seu_filtered <- subset(seu, subset = CTstrict != 'TRAV14D-1.TRAJ21.TRAC_TGTGCAGCAGTGTCTAATTACAACGTGCTTTACTTC_TRBV26.TRBD1.TRBJ1-2.TRBC1_TGTGCCAGCAGAGGACAGGGGGTCTCCGACTACACCTTC')
+clonalOverlap(seu_filtered, cloneCall="strict", method="morisita", split.by = 'seurat_clusters')
+```
+
+```{r}
+sub <- subset(seu, subset = Frequency == 7)
+sub@meta.data$CTstrict
+```
+```{r}
+
+
+FeaturePlot(seu, feature = "nFeature_RNA")
+
+```
+
+```{r}
+
+seu_filtered_1 <- seu_filtered[,grepl("TRAV12D-3", seu_filtered$CTgene)]
+seu_filtered_2 <- seu_filtered[,grepl("TRAJ23", seu_filtered$CTgene)]
+seu_filtered_3 <- seu_filtered_1[,grepl("TRAJ23", seu_filtered_1$CTgene)]
+
+hl <- colnames(seu_filtered_3)
+
+DimPlot(seu_filtered, cells.highlight = hl, split.by = 'group')
+```
+
+```{r}
+FeaturePlot(seu, features = 'Trgv2')
+
+seu_filtered_4 <- seu_filtered[,grepl("Trg", seu_filtered$CTgene)]
+
+
+hl <- colnames(seu_filtered_4)
+
+DimPlot(seu_filtered, cells.highlight = hl, split.by = 'group')
+```
+```{r}
+
+```
+
+
+```{r}
+saveRDS(seu, '../output/tcr.rds')
+```
+

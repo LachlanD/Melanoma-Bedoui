@@ -1,0 +1,158 @@
+---
+title: "8_tf_analysis"
+author: "Lachlan Dryburgh"
+date: "2024-03-19"
+output: html_document
+---
+
+```{r}
+library(Seurat)
+library(decoupleR)
+library(OmnipathR)
+library(dplyr)
+library(tibble)
+library(tidyr)
+library(ggplot2)
+library(pheatmap)
+
+#seu3 <- readRDS('reclustered.rds')
+seu3 <- readRDS('../output/refiltered.rds')
+```
+
+```{r}
+collect <- decoupleR::get_collectri(organism='mouse', split_complexes=FALSE)
+```
+
+```{r}
+mat <- as.matrix(seu3@assays$RNA$data)
+
+acts <- run_ulm(mat=mat, net=collect, .source='source', .target='target',
+                .mor='mor', minsize = 5)
+```
+
+```{r}
+seu3[['tfsulm']] <- acts %>%
+  pivot_wider(id_cols = 'source', names_from = 'condition',
+              values_from = 'score') %>%
+  column_to_rownames('source') %>%
+  Seurat::CreateAssayObject(.)
+
+
+DefaultAssay(object = seu3) <- "tfsulm"
+
+# Scale the data
+seu3 <- ScaleData(seu3)
+seu3@assays$tfsulm@data <- seu3@assays$tfsulm@scale.data
+```
+
+```{r}
+p1 <-DimPlot(seu3)
+
+DefaultAssay(object = seu3) <- "tfsulm"
+p2 <- FeaturePlot(seu3, features = "Foxo1") +
+  ggtitle('Foxo1 Activity')
+
+DefaultAssay(object = seu3) <- "RNA"
+p3 <- FeaturePlot(seu3, features = "Foxo1")  +
+  ggtitle('Foxo1 Expression')
+
+p1 + p2 + p3
+
+DefaultAssay(object = seu3) <- "tfsulm"
+FeaturePlot(seu3, features = "Foxo1", split.by = 'group')
+
+DefaultAssay(seu3) <- 'RNA'
+```
+
+```{r}
+
+seu3@meta.data$cond_cluster <- paste(seu3@meta.data$diet, seu3@meta.data$seurat_clusters, sep = '_')
+
+Idents(seu3) <- 'cond_cluster'
+
+n_tfs <- 25
+# Extract activities from object as a long dataframe
+df <- t(as.matrix(seu3@assays$tfsulm@data)) %>%
+  as.data.frame() %>%
+  mutate(cluster = Idents(seu3)) %>%
+  pivot_longer(cols = -cluster, names_to = "source", values_to = "score") %>%
+  group_by(cluster, source) %>%
+  summarise(mean = mean(score))
+
+# Get top tfs with more variable means across clusters
+tfs <- df %>%
+  group_by(source) %>%
+  summarise(std = sd(mean)) %>%
+  arrange(-abs(std)) %>%
+  head(n_tfs) %>%
+  pull(source)
+
+# Subset long data frame to top tfs and transform to wide matrix
+top_acts_mat <- df %>%
+  filter(source %in% tfs) %>%
+  pivot_wider(id_cols = 'cluster', names_from = 'source',
+              values_from = 'mean') %>%
+  column_to_rownames('cluster') %>%
+  as.matrix()
+
+# Choose color palette
+palette_length = 100
+my_color = colorRampPalette(c("Darkblue", "white","red"))(palette_length)
+
+my_breaks <- c(seq(-3, 0, length.out=ceiling(palette_length/2) + 1),
+               seq(0.05, 3, length.out=floor(palette_length/2)))
+
+# Plot
+pheatmap(top_acts_mat, border_color = NA, color=my_color, breaks = my_breaks)
+```
+```{r}
+#pseudo_bulk <- AggregateExpression(seu3, assays = "RNA",  group.by = c('seurat_clusters'))
+pseudo_bulk <- AggregateExpression(seu3, assays = "RNA",  group.by = c('diet', 'seurat_clusters'))
+seu3 <- FindVariableFeatures(seu3, nfeatures = 2000)
+library('RTN')
+
+#tfs <- intersect(unique(collect$source), rownames(pseudo_bulk$RNA))
+#tfs <- intersect(colnames(top_acts_mat), rownames(pseudo_bulk$RNA))
+#tfs <- c('Foxo1') 
+tf <- read.csv('~/references/mouse/mm9_TFs.csv')
+#tfs <- tf$Symbol
+tfs <- intersect(tf$Symbol, rownames(pseudo_bulk$RNA))
+#tfs <- intersect(tf$Symbol, VariableFeatures(seu3))
+
+#targs <- intersect(collect$target, rownames(pseudo_bulk$RNA))
+targs <- intersect(VariableFeatures(seu3), rownames(pseudo_bulk$RNA))
+
+
+#expr <- as.matrix(pseudo_bulk$RNA)[targs,]
+expr <- as.matrix(pseudo_bulk$RNA)
+#expr <- edgeR::cpm(expr, log = T, prior.count = 0.5)
+#expr <- edgeR::cpm(expr, log = F)
+
+rtni <- tni.constructor(expData = expr, regulatoryElements = tfs)
+
+options(cluster=snow::makeCluster(spec=4, "SOCK"))
+#rtni <- tni.permutation(rtni, nPermutations = 2000)
+rtni <- tni.permutation(rtni, pValueCutoff = 1e-7)
+rtni <- tni.bootstrap(rtni)
+snow::stopCluster(getOption("cluster"))
+
+rtni <- tni.dpi.filter(rtni)
+tni.regulon.summary(rtni)
+tni.regulon.summary(rtni, regulatoryElements = "Foxo1")
+```
+```{r}
+tni.plot.checks(rtni, minRegulonSize = 15, option = c("barplot","edf","points"))
+
+regulons <- tni.get(rtni, what = "regulons.and.mode", idkey = "ID")
+head(regulons$Foxo1, 100)
+
+
+regulons$Foxo1
+```
+
+```{r}
+saveRDS(rtni, '../output/rtni.Rds')
+saveRDS(seu3, '../output/seu_tf.rds')
+```
+
+

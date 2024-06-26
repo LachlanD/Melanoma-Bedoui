@@ -1,0 +1,398 @@
+---
+title: "11_scenic_results"
+author: "Lachlan Dryburgh"
+date: "2024-04-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(SCENIC)
+library(Seurat)
+library(dplyr)
+library(tidyverse)
+library(SCopeLoomR)
+
+scenicOptions <- readRDS('../scenic/scenic/int/scenicOptions.Rds')
+```
+
+```{r}
+#seu3 <- readRDS('refiltered.rds.rds')
+seu3 <- readRDS('../output/seu_tf.rds')
+DefaultAssay(seu3) <- 'RNA'
+exprMat <- as.array(seu3@assays$RNA$counts)
+
+regulons <- loadInt(scenicOptions, "regulons")
+
+tSNE_scenic <- readRDS(tsneFileName(scenicOptions))
+
+aucell_regulonAUC <- loadInt(scenicOptions, "aucell_regulonAUC")
+
+par(mfrow=c(2,2))
+AUCell::AUCell_plotTSNE(seu3@reductions$umap@cell.embeddings, exprMat, aucell_regulonAUC[onlyNonDuplicatedExtended(rownames(aucell_regulonAUC))[c("Ikzf2")],])
+
+par(mfrow=c(2,2))
+AUCell::AUCell_plotTSNE(seu3@reductions$umap@cell.embeddings, exprMat, aucell_regulonAUC[onlyNonDuplicatedExtended(rownames(aucell_regulonAUC))[c("Irf9")],])
+
+par(mfrow=c(2,2))
+AUCell::AUCell_plotTSNE(seu3@reductions$umap@cell.embeddings, exprMat, aucell_regulonAUC[onlyNonDuplicatedExtended(rownames(aucell_regulonAUC))[c("Irf7")],])
+
+par(mfrow=c(2,2))                             
+AUCell::AUCell_plotTSNE(seu3@reductions$umap@cell.embeddings, exprMat, aucell_regulonAUC[onlyNonDuplicatedExtended(rownames(aucell_regulonAUC))[c("Runx2")],])
+
+par(mfrow=c(2,2))                             
+AUCell::AUCell_plotTSNE(seu3@reductions$umap@cell.embeddings, exprMat, aucell_regulonAUC[onlyNonDuplicatedExtended(rownames(aucell_regulonAUC))[c("Pura")],])
+
+
+par(mfrow=c(2,2))                             
+AUCell::AUCell_plotTSNE(seu3@reductions$umap@cell.embeddings, exprMat, aucell_regulonAUC[onlyNonDuplicatedExtended(rownames(aucell_regulonAUC))[c("Bach2")],])
+
+par(mfrow=c(2,2))                             
+AUCell::AUCell_plotTSNE(seu3@reductions$umap@cell.embeddings, exprMat, aucell_regulonAUC[onlyNonDuplicatedExtended(rownames(aucell_regulonAUC))[c("Myc")],])
+
+par(mfrow=c(2,2))                             
+AUCell::AUCell_plotTSNE(seu3@reductions$umap@cell.embeddings, exprMat, aucell_regulonAUC[onlyNonDuplicatedExtended(rownames(aucell_regulonAUC))[c("Klf2")],])
+
+par(mfrow=c(2,2))                             
+AUCell::AUCell_plotTSNE(seu3@reductions$umap@cell.embeddings, exprMat, aucell_regulonAUC[onlyNonDuplicatedExtended(rownames(aucell_regulonAUC))[c("Stat1")],])
+
+par(mfrow=c(2,2))                             
+AUCell::AUCell_plotTSNE(seu3@reductions$umap@cell.embeddings, exprMat, aucell_regulonAUC[onlyNonDuplicatedExtended(rownames(aucell_regulonAUC))[c("Junb")],])
+
+par(mfrow=c(2,2))                             
+AUCell::AUCell_plotTSNE(seu3@reductions$umap@cell.embeddings, exprMat, aucell_regulonAUC[onlyNonDuplicatedExtended(rownames(aucell_regulonAUC))[c("Rxrb")],])
+
+
+par(mfrow=c(2,2))                             
+AUCell::AUCell_plotTSNE(seu3@reductions$umap@cell.embeddings, exprMat, aucell_regulonAUC[onlyNonDuplicatedExtended(rownames(aucell_regulonAUC))[c("Foxo1")],])
+
+
+par(mfrow=c(2,2))                             
+AUCell::AUCell_plotTSNE(seu3@reductions$umap@cell.embeddings, exprMat, aucell_regulonAUC[onlyNonDuplicatedExtended(rownames(aucell_regulonAUC))[c("Cebpb")],])
+```
+
+```{r}
+FeaturePlot(seu3, features = 'Foxo1')
+FeaturePlot(seu3, features = 'Cxxc5', split.by = 'diet')
+FeaturePlot(seu3, features = 'Kctd12')
+FeaturePlot(seu3, features = 'Ikzf2')
+FeaturePlot(seu3, features = 'Tcf7')
+FeaturePlot(seu3, features = 'Gnai2')
+FeaturePlot(seu3, features = 'Prdm2')
+FeaturePlot(seu3, features = 'Itgb3bp')
+FeaturePlot(seu3, features = 'Mef2d')
+FeaturePlot(seu3, features = 'Stat1')
+FeaturePlot(seu3, features = 'Foxp3', split.by = 'diet')
+FeaturePlot(seu3, features = 'Il7r', split.by = 'diet')
+FeaturePlot(seu3, features = 'Relb', split.by = 'diet')
+FeaturePlot(seu3, features = 'Rel', split.by = 'diet')
+FeaturePlot(seu3, features = 'Irf9', split.by = 'diet')
+FeaturePlot(seu3, features = 'Gabrr2', split.by = 'diet')
+```
+
+
+
+```{r}
+regulonTargetsInfo <- loadInt(scenicOptions, "regulonTargetsInfo")
+
+
+r <- 'Foxo1'
+
+targets <- regulonTargetsInfo[ regulonTargetsInfo$TF == r,]
+targets <- targets[targets$highConfAnnot == TRUE,]
+
+targets <- targets[order(targets$CoexWeight, decreasing = T),]
+targets <- targets[1:5, ]$gene
+
+df <- regulonTargetsInfo[regulonTargetsInfo$gene %in% targets,c(1,2,6)]
+
+
+names(df) <- c('from', 'to', 'weight')
+#df <- df[order(df$weight, decreasing = T),]
+#df <- df[1:50,]
+
+library(igraph)
+g <- graph_from_data_frame(df)
+
+plot(g)
+```
+```{r}
+regulonAUC <- loadInt(scenicOptions, "aucell_regulonAUC")
+regulonAUC <- regulonAUC[onlyNonDuplicatedExtended(rownames(regulonAUC)),]
+
+
+```
+
+```{r}
+Foxo1.targets <- regulonTargetsInfo[regulonTargetsInfo$TF == 'Foxo1' & regulonTargetsInfo$highConfAnnot == T,]
+Foxo1.targets <- Foxo1.targets[order(Foxo1.targets$CoexWeight, decreasing = T),]
+
+head(Foxo1.targets, 40)
+```
+```{r}
+#library(SCopeLoomR)
+
+#scenicOptions@fileNames$output["loomFile",] <- "int/out_SCENIC.loom"
+#export2loom(scenicOptions, exprMat)
+
+```
+
+```{r}
+cluster_cells <- split(colnames(seu3), seu3$seurat_clusters)
+
+library(AUCell)
+regulonActivity_byCellType <- sapply(cluster_cells,
+                                     function(cells) rowMeans(getAUC(regulonAUC)[,cells]))
+#regulonActivity_byCellType_Scaled <- t(scale(t(regulonActivity_byCellType), center = T, scale=T))
+regulonActivity_byCellType_Scaled <- regulonActivity_byCellType
+
+ComplexHeatmap::Heatmap(regulonActivity_byCellType_Scaled, name="Regulon activity", row_names_gp = grid::gpar(fontsize = 6))
+
+minPerc <- .1
+binaryRegulonActivity <- loadInt(scenicOptions, "aucell_binary_nonDupl")
+cellInfo_binarizedCells <- seu3[which(colnames(seu3)%in% colnames(binaryRegulonActivity)),, drop=FALSE]
+regulonActivity_byCellType_Binarized <- sapply(split(colnames(cellInfo_binarizedCells), cellInfo_binarizedCells$seurat_clusters), 
+                                               function(cells) rowMeans(binaryRegulonActivity[,cells, drop=FALSE]))
+
+binaryActPerc_subset <- regulonActivity_byCellType_Binarized[which(rowSums(regulonActivity_byCellType_Binarized>minPerc)>0),]
+ComplexHeatmap::Heatmap(binaryActPerc_subset, name="Regulon activity (%)", col = c("white","pink","red"))
+```
+```{r}
+cluster_cells <- split(colnames(seu3), seu3$diet)
+
+library(AUCell)
+regulonActivity_byCellType <- sapply(cluster_cells,
+                                     function(cells) rowMeans(getAUC(regulonAUC)[,cells]))
+regulonActivity_byCellType_Scaled <- t(scale(t(regulonActivity_byCellType), center = T, scale=T))
+#regulonActivity_byCellType_Scaled <- regulonActivity_byCellType
+
+ComplexHeatmap::Heatmap(regulonActivity_byCellType_Scaled, name="Regulon activity")
+
+minPerc <- .2
+binaryRegulonActivity <- loadInt(scenicOptions, "aucell_binary_nonDupl")
+cellInfo_binarizedCells <- seu3[which(colnames(seu3)%in% colnames(binaryRegulonActivity)),, drop=FALSE]
+regulonActivity_byCellType_Binarized <- sapply(split(colnames(cellInfo_binarizedCells), cellInfo_binarizedCells$diet), 
+                                               function(cells) rowMeans(binaryRegulonActivity[,cells, drop=FALSE]))
+
+binaryActPerc_subset <- regulonActivity_byCellType_Binarized[which(rowSums(regulonActivity_byCellType_Binarized>minPerc)>0),]
+ComplexHeatmap::Heatmap(binaryActPerc_subset, name="Regulon activity (%)", col = c("white","pink","red"))
+
+cluster_cells <- split(colnames(seu3), list(seu3$diet, seu3$seurat_clusters))
+
+regulonActivity_byCellType <- sapply(cluster_cells, function(cells) rowMeans(getAUC(regulonAUC)[,cells]))
+regulonActivity_byCellType_Scaled <- t(scale(t(regulonActivity_byCellType), center = T, scale=T))
+#regulonActivity_byCellType_Scaled <- regulonActivity_byCellType
+
+ComplexHeatmap::Heatmap(regulonActivity_byCellType_Scaled, name="Regulon activity", row_names_gp = grid::gpar(fontsize = 6))
+
+minPerc <- .2
+binaryRegulonActivity <- loadInt(scenicOptions, "aucell_binary_nonDupl")
+cellInfo_binarizedCells <- seu3[which(colnames(seu3)%in% colnames(binaryRegulonActivity)),, drop=FALSE]
+
+regulonActivity_byCellType_Binarized <- sapply(split(colnames(cellInfo_binarizedCells), list(cellInfo_binarizedCells$diet, cellInfo_binarizedCells$seurat_clusters)), function(cells) rowMeans(binaryRegulonActivity[,cells, drop=FALSE]))
+
+binaryActPerc_subset <- regulonActivity_byCellType_Binarized[which(rowSums(regulonActivity_byCellType_Binarized>minPerc)>0),]
+ComplexHeatmap::Heatmap(binaryActPerc_subset, name="Regulon activity (%)", col = c("white","pink","red"))
+```
+```{r}
+seu3 <- AddModuleScore(seu3, list(regulons$Irf9), name = "Irf9_regulon")
+seu3 <- AddModuleScore(seu3, list(regulons$Irf7), name = "Irf7_regulon")
+seu3 <- AddModuleScore(seu3, list(regulons$Ikzf2), name = "Ikzf2_regulon")
+seu3 <- AddModuleScore(seu3, list(regulons$Myc), name = "Myc_regulon")
+seu3 <- AddModuleScore(seu3, list(regulons$Klf2), name = "Klf2_regulon")
+seu3 <- AddModuleScore(seu3, list(regulons$Pura), name = "Pura_regulon")
+seu3 <- AddModuleScore(seu3, list(regulons$Runx2), name = "Runx2_regulon")
+seu3 <- AddModuleScore(seu3, list(regulons$Rel), name = "Relb_regulon")
+seu3 <- AddModuleScore(seu3, list(regulons$Foxo1), name = "Foxo1_regulon")
+seu3 <- AddModuleScore(seu3, list(regulons$Cebpb), name = "Cebpb_regulon")
+
+
+```
+
+
+```{r}
+DefaultAssay(seu3) <- 'tfsulm'
+
+FeaturePlot(seu3, feature = c("Irf9_regulon1"), split.by = "diet")
+FeaturePlot(seu3, feature = c("Irf7_regulon1", "Irf7"), split.by = "diet")
+FeaturePlot(seu3, feature = c("Ikzf2_regulon1"), split.by = "diet")
+FeaturePlot(seu3, feature = c("Myc_regulon1"), split.by = "diet")
+FeaturePlot(seu3, feature = c("Klf2_regulon1", "Klf2"), split.by = "diet")
+FeaturePlot(seu3, feature = c("Pura_regulon1"), split.by = "diet")
+FeaturePlot(seu3, feature = c("Runx2_regulon1", "Runx2"), split.by = "diet")
+FeaturePlot(seu3, feature = c("Rel_regulon1", "Rel"), split.by = "diet")
+FeaturePlot(seu3, feature = c("Foxo1_regulon1"), split.by = "diet")
+FeaturePlot(seu3, feature = c("Cebpb_regulon1"), split.by = "diet")
+
+DefaultAssay(seu3) <- 'RNA'
+```
+```{r}
+ctrl_targ <- read.table("scenic_ctrl/output/Step2_regulonTargetsInfo.tsv", header = T)
+hf_targ <- read.table("scenic_hf/output/Step2_regulonTargetsInfo.tsv", header = T)
+targ <- read.table("scenic/output/Step2_regulonTargetsInfo.tsv", header = T)
+
+
+
+ctrl_loom <- open_loom("scenic_ctrl/int/out_SCENIC.loom")
+regulonAUC_ctrl <- get_regulons_AUC(ctrl_loom)
+close_loom(ctrl_loom)
+
+hf_loom <- open_loom("scenic_hf/int/out_SCENIC.loom")
+regulonAUC_hf <- get_regulons_AUC(hf_loom)
+close_loom(hf_loom)
+
+c_tf <- unique(ctrl_targ$TF)
+h_tf <- unique(hf_targ$TF)
+
+all <- unique(regulonTargetsInfo$TF)
+both <- c_tf[c_tf %in% h_tf]
+ctrl_only <- c_tf[!(c_tf %in% h_tf)]
+hf_only <- h_tf[!(h_tf %in% c_tf)]
+
+foxo1.c <- ctrl_targ[ctrl_targ$TF == 'Foxo1' & ctrl_targ$highConfAnnot,]
+foxo1.h <- hf_targ[hf_targ$TF == 'Foxo1' & hf_targ$highConfAnnot,]
+
+foxo1.c <- foxo1.c[order(foxo1.c$NES, foxo1.c$CoexWeight, decreasing = T),]
+foxo1.h <- foxo1.h[order(foxo1.h$NES, foxo1.h$CoexWeight, decreasing = T),]
+
+
+foxo1.ctrl_only <- foxo1.c[!(foxo1.c$gene %in% foxo1.h$gene),]
+foxo1.hf_only <- foxo1.h[!(foxo1.h$gene %in% foxo1.c$gene),]
+
+foxo1.ctrl_only <- foxo1.ctrl_only[order(foxo1.ctrl_only$CoexWeight, decreasing = T),]
+foxo1.hf_only <- foxo1.hf_only[order(foxo1.hf_only$CoexWeight, decreasing = T),]
+
+#seu3 <- AddModuleScore(seu3, features = list(foxo1.c$gene), name = 'Foxo1_ctrl')
+seu3 <- AddModuleScore(seu3, features = list(foxo1.ctrl_only$gene), name = 'Foxo1_ctrl')
+
+FeaturePlot(seu3, features = 'Foxo1_ctrl1', split.by = 'diet')
+
+#seu3 <- AddModuleScore(seu3, features = list(foxo1.h$gene), name = 'Foxo1_hf')
+seu3 <- AddModuleScore(seu3, features = list(foxo1.hf_only$gene), name = 'Foxo1_hf')
+FeaturePlot(seu3, features = 'Foxo1_hf1', split.by = 'diet')
+
+ctrl_targ[order(ctrl_targ$NES, ctrl_targ$CoexWeight, decreasing = T),]
+
+library(VennDiagram)
+
+venn.diagram(x = list(all, c_tf, h_tf),  category.names = c('together', 'ctrl', 'hf'), filename = 'figures/reg_venn.png', output=T, disable.logging = T)
+venn.diagram(x = list(Foxo1.targets$gene, foxo1.c$gene, foxo1.h$gene),  category.names = c('together', 'ctrl', 'hf'), filename = 'figures/foxo1_venn.png', output=T, disable.logging = T) 
+```
+
+```{r}
+reg.Bach2 <- regulonTargetsInfo[regulonTargetsInfo$TF == 'Bach2',]$gene
+ctrl.Bach2 <- ctrl_targ[ctrl_targ$TF == 'Bach2',]$gene
+hf.Bach2 <- hf_targ[hf_targ$TF == 'Bach2',]$gene
+
+venn.diagram(x = list(reg.Bach2, ctrl.Bach2, hf.Bach2),  category.names = c('together', 'ctrl', 'hf'), filename = 'figures/Bach2_venn.png', output=T, disable.logging = T)
+
+```
+
+```{r}
+seu3[['scenic']] <- CreateAssayObject(regulonAUC@assays@data$AUC)
+
+seu3@meta.data$cond_cluster <- paste(seu3@meta.data$diet, seu3@meta.data$seurat_clusters, sep = '_')
+
+Idents(seu3) <- 'cond_cluster'
+
+n_tfs <- 25
+# Extract activities from object as a long dataframe
+df <- t(as.matrix(seu3@assays$scenic@data)) %>%
+  as.data.frame() %>%
+  mutate(cluster = Idents(seu3)) %>%
+  pivot_longer(cols = -cluster, names_to = "source", values_to = "score") %>%
+  group_by(cluster, source) %>%
+  summarise(mean = mean(score))
+
+
+
+# Get top tfs with more variable means across clusters
+tfs <- df %>%
+  group_by(source) %>%
+  summarise(std = sd(mean)) %>%
+  arrange(-abs(std)) %>%
+  head(n_tfs) %>%
+  pull(source)
+
+# Subset long data frame to top tfs and transform to wide matrix
+top_acts_mat <- df %>%
+  filter(source %in% tfs) %>%
+  pivot_wider(id_cols = 'cluster', names_from = 'source',
+              values_from = 'mean') %>%
+  column_to_rownames('cluster') %>%
+  as.matrix()
+
+# Choose color palette
+palette_length = 100
+my_color = colorRampPalette(c("Darkblue", "white","red"))(palette_length)
+
+my_breaks <-   seq(0, 1, length.out=floor(palette_length))
+
+top0 <- df[df$cluster %in% c('HF_0', 'Ctrl_0'),] %>% group_by(source) %>% summarise(std = sd(mean)) %>% arrange(-std)
+top1 <- df[df$cluster %in% c('HF_1', 'Ctrl_1'),] %>% group_by(source) %>% summarise(std = sd(mean)) %>% arrange(-std)
+top2 <- df[df$cluster %in% c('HF_2', 'Ctrl_2'),] %>% group_by(source) %>% summarise(std = sd(mean)) %>% arrange(-std)
+top3 <- df[df$cluster %in% c('HF_3', 'Ctrl_3'),] %>% group_by(source) %>% summarise(std = sd(mean)) %>% arrange(-std)
+top4 <- df[df$cluster %in% c('HF_4', 'Ctrl_4'),] %>% group_by(source) %>% summarise(std = sd(mean)) %>% arrange(-std)
+top5 <- df[df$cluster %in% c('HF_5', 'Ctrl_5'),] %>% group_by(source) %>% summarise(std = sd(mean)) %>% arrange(-std)
+
+top <- rbind(top0,top1,top2,top3,top4,top5) %>% arrange(-std)
+top_tf <- head(unique(top$source), 20)
+
+top_acts_mat <- df %>%
+  filter(source %in% top_tf) %>%
+  pivot_wider(id_cols = 'cluster', names_from = 'source',
+              values_from = 'mean') %>%
+  column_to_rownames('cluster') %>%
+  as.matrix()
+library(pheatmap)
+
+
+# Plot
+pheatmap(top_acts_mat, border_color = NA, color=my_color, breaks = my_breaks)
+```
+
+
+
+
+```{r}
+filtered_gex <- readRDS('~/projects/Sammy_Bedoui/ATAC/ilaria/RData/filtered_gex.rds')
+
+filtered_gex@meta.data$group <- paste(filtered_gex@meta.data$treatment, filtered_gex$SLEC_MPEC_other, sep = '_')
+
+DimPlot(filtered_gex, group.by = 'group')
+
+filtered_gex <- AddModuleScore(filtered_gex, list(regulonTargetsInfo[regulonTargetsInfo$TF == 'Foxo1',]$gene), name = 'Foxo1_regulon')
+filtered_gex <- AddModuleScore(filtered_gex, list(regulonTargetsInfo[regulonTargetsInfo$TF == 'Bach2',]$gene), name = 'Bach2_regulon')
+filtered_gex <- AddModuleScore(filtered_gex, list(regulonTargetsInfo[regulonTargetsInfo$TF == 'Ikzf2',]$gene), name = 'Ikzf2_regulon')
+filtered_gex <- AddModuleScore(filtered_gex, list(regulonTargetsInfo[regulonTargetsInfo$TF == 'Myc',]$gene), name = 'Myc_regulon')
+filtered_gex <- AddModuleScore(filtered_gex, list(regulonTargetsInfo[regulonTargetsInfo$TF == 'Irf7',]$gene), name = 'Irf7_regulon')
+
+
+FeaturePlot(filtered_gex, features = 'Bach2_regulon1')
+FeaturePlot(filtered_gex, features = 'Foxo1_regulon1')
+FeaturePlot(filtered_gex, features = 'Ikzf2_regulon1')
+FeaturePlot(filtered_gex, features = 'Myc_regulon1')
+FeaturePlot(filtered_gex, features = 'Irf7_regulon1')
+
+FeaturePlot(filtered_gex, features = 'Foxo1')
+FeaturePlot(filtered_gex, features = 'Ikzf2')
+FeaturePlot(filtered_gex, features = 'Bach2')
+FeaturePlot(filtered_gex, features = 'Myc')
+FeaturePlot(filtered_gex, features = 'Irf7')
+FeaturePlot(filtered_gex, features = 'Ets1')
+
+```
+```{r}
+invitro <- read.table('../scenic/invitro/output/Step2_regulonTargetsInfo.tsv', header = T)
+
+iv.foxo1 <- invitro[invitro$TF == 'Foxo1' & invitro$highConfAnnot == TRUE,]
+iv.foxo1 <- iv.foxo1[order(iv.foxo1$CoexWeight, decreasing = T),]
+
+FeaturePlot(seu3, features = 'Irf7_regulon1', split.by = 'diet')
+FeaturePlot(filtered_gex, features = 'Irf7_regulon1')
+
+
+VlnPlot(seu3, features = 'Irf7_regulon1', group.by = 'seurat_clusters', split.by = 'diet')
+VlnPlot(filtered_gex, features = 'Irf7_regulon1', group.by = 'treatment')
+```
+
+
